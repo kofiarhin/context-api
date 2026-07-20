@@ -9,14 +9,15 @@ const { buildErrorBody } = require('../utils/responses');
  * Builds CORS options from an explicit allowlist.
  *
  * With no configured origins the API answers same-origin and non-browser
- * clients only; it never falls back to a permissive wildcard.
+ * clients only. A literal `*` explicitly enables public browser access.
  */
 function buildCorsOptions(env) {
   const allowlist = env.corsOrigins || [];
+  const allowAnyOrigin = allowlist.includes('*');
 
   return {
     origin(origin, callback) {
-      if (!origin || allowlist.includes(origin)) {
+      if (!origin || allowAnyOrigin || allowlist.includes(origin)) {
         callback(null, true);
         return;
       }
