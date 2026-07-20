@@ -14,7 +14,7 @@ function collectIdentities(domain) {
  * Returns a list of human-readable problems. An empty list means the seed set is
  * internally consistent and safe to apply.
  */
-function validateSeedData(registry = REGISTRY) {
+async function validateSeedData(registry = REGISTRY) {
   const problems = [];
   const byName = new Map(registry.map((domain) => [domain.name, domain]));
 
@@ -29,7 +29,7 @@ function validateSeedData(registry = REGISTRY) {
   for (const domain of registry) {
     const seen = new Set();
 
-    domain.records.forEach((record, index) => {
+    for (const [index, record] of domain.records.entries()) {
       const label = identityLabel(domain, record);
       const position = `${domain.name}[${index}]`;
 
@@ -45,14 +45,20 @@ function validateSeedData(registry = REGISTRY) {
       seen.add(label);
 
       // Schema-level validation without touching the database.
-      const error = new domain.Model(record).validateSync();
+      const document = new domain.Model(record);
 
-      if (error) {
+      try {
+        await document.validate();
+      } catch (error) {
+        if (!error || error.name !== 'ValidationError' || !error.errors) {
+          throw error;
+        }
+
         for (const [field, detail] of Object.entries(error.errors)) {
           problems.push(`${position} (${label}) field "${field}": ${detail.message}`);
         }
       }
-    });
+    }
   }
 
   problems.push(...validateCrossReferences(byName));

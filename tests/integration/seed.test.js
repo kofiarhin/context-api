@@ -28,6 +28,29 @@ async function countAll() {
   return counts;
 }
 
+function withArchitectProject(registry) {
+  return registry.map((domain) => {
+    if (domain.name !== 'projects') {
+      return domain;
+    }
+
+    const [template] = domain.records;
+
+    return {
+      ...domain,
+      records: [
+        ...domain.records,
+        {
+          ...template,
+          projectId: 'architect',
+          slug: 'architect',
+          name: 'Architect',
+        },
+      ],
+    };
+  });
+}
+
 describe('seed workflow', () => {
   it('inserts every domain on a clean database', async () => {
     const result = await seedAll();
@@ -121,11 +144,14 @@ describe('seed workflow', () => {
 
   it('reports per-record write failures instead of aborting the whole run', async () => {
     const conventions = REGISTRY.find((domain) => domain.name === 'codingConventions');
+    let validationCalls = 0;
+    let createCalls = 0;
 
     // Passes seed validation, then fails at write time.
     class FailingModel {
-      validateSync() {
-        return undefined;
+      async validate() {
+        validationCalls += 1;
+        expect(createCalls).toBe(0);
       }
 
       static findOne() {
@@ -133,23 +159,64 @@ describe('seed workflow', () => {
       }
 
       static create() {
+        createCalls += 1;
         return Promise.reject(new Error('simulated write failure'));
       }
     }
 
     const result = await seedAll(
-      REGISTRY.map((domain) =>
-        domain.name === 'codingConventions' ? { ...domain, Model: FailingModel } : domain
+      withArchitectProject(
+        REGISTRY.map((domain) =>
+          domain.name === 'codingConventions' ? { ...domain, Model: FailingModel } : domain
+        )
       )
     );
 
     expect(result.ok).toBe(false);
     expect(result.phase).toBe('write');
+    expect(validationCalls).toBe(conventions.records.length);
     expect(result.domains.codingConventions.failed).toBe(conventions.records.length);
     expect(result.domains.codingConventions.errors[0]).toContain('simulated write failure');
 
     // Other domains still completed, so a partial failure is visible rather than silent.
     expect(result.domains.projects.inserted).toBeGreaterThan(0);
+  });
+
+  it('completes validation for the full registry before any write operation starts', async () => {
+    const registry = withArchitectProject(REGISTRY);
+    const expectedValidations = registry.reduce(
+      (total, domain) => total + domain.records.length,
+      0
+    );
+    let validationCalls = 0;
+    let writeCalls = 0;
+
+    function createInstrumentedModel() {
+      return class InstrumentedModel {
+        async validate() {
+          validationCalls += 1;
+        }
+
+        static findOne() {
+          expect(validationCalls).toBe(expectedValidations);
+          writeCalls += 1;
+          return Promise.resolve(null);
+        }
+
+        static create() {
+          return Promise.resolve();
+        }
+      };
+    }
+
+    const result = await seedAll(
+      registry.map((domain) => ({ ...domain, Model: createInstrumentedModel() }))
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.phase).toBe('write');
+    expect(validationCalls).toBe(expectedValidations);
+    expect(writeCalls).toBe(expectedValidations);
   });
 
   it('leaves collections untouched unless reset is requested explicitly', async () => {

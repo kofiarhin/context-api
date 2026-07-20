@@ -37,7 +37,8 @@ function normalizeValue(value) {
  */
 function isUnchanged(record, existing) {
   return Object.keys(record).every(
-    (key) => JSON.stringify(normalizeValue(record[key])) === JSON.stringify(normalizeValue(existing[key]))
+    (key) =>
+      JSON.stringify(normalizeValue(record[key])) === JSON.stringify(normalizeValue(existing[key]))
   );
 }
 
@@ -84,7 +85,7 @@ async function seedDomain(domain) {
  * database half-seeded.
  */
 async function seedAll(registry = REGISTRY) {
-  const problems = validateSeedData(registry);
+  const problems = await validateSeedData(registry);
 
   if (problems.length > 0) {
     return { ok: false, phase: 'validation', problems, domains: {} };

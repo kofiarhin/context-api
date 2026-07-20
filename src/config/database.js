@@ -15,6 +15,7 @@ const STATE_NAMES = {
 mongoose.set('strictQuery', true);
 
 let listenersRegistered = false;
+let intentionalDisconnect = false;
 
 /**
  * Logs connection state transitions once per process. Connection strings are
@@ -28,7 +29,15 @@ function registerConnectionLogging() {
   const connection = mongoose.connection;
 
   connection.on('connected', () => logger.info('Database connection established'));
-  connection.on('disconnected', () => logger.warn('Database connection lost'));
+  connection.on('disconnected', () => {
+    if (intentionalDisconnect) {
+      intentionalDisconnect = false;
+      logger.info('Database connection closed');
+      return;
+    }
+
+    logger.warn('Database connection lost');
+  });
   connection.on('reconnected', () => logger.info('Database connection restored'));
   connection.on('error', (error) => {
     logger.error('Database connection error', { errorName: error.name });
@@ -47,6 +56,7 @@ function isConnected() {
 
 async function connect(uri, options = {}) {
   registerConnectionLogging();
+  intentionalDisconnect = false;
 
   await mongoose.connect(uri, {
     serverSelectionTimeoutMS: 10000,
@@ -58,10 +68,18 @@ async function connect(uri, options = {}) {
 
 async function disconnect() {
   if (mongoose.connection.readyState === 0) {
+    intentionalDisconnect = false;
     return;
   }
 
-  await mongoose.disconnect();
+  intentionalDisconnect = true;
+
+  try {
+    await mongoose.disconnect();
+  } catch (error) {
+    intentionalDisconnect = false;
+    throw error;
+  }
 }
 
 /**
