@@ -18,7 +18,6 @@ function registerShutdownHandlers(server) {
     shuttingDown = true;
     logger.info('shutdown.started', { signal });
 
-    // Backstop: never hang forever waiting on in-flight sockets.
     const timer = setTimeout(() => {
       logger.error('shutdown.timeout', { signal });
       process.exit(1);
@@ -45,10 +44,6 @@ function registerShutdownHandlers(server) {
   return shutdown;
 }
 
-/**
- * Connects to MongoDB before binding the port so the service never accepts
- * traffic it cannot serve (SPEC §15).
- */
 async function start() {
   let env;
 
@@ -61,7 +56,7 @@ async function start() {
   }
 
   try {
-    await connect(env.mongodbUri);
+    await connect(env.mongodbUri, { autoIndex: !env.isProduction });
   } catch (error) {
     logger.error('startup.database_connection_failed', { errorName: error.name });
     process.exit(1);
