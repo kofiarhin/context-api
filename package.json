@@ -18,16 +18,12 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run lint && npm run format:check && npm test",
+    "verify:production": "node scripts/verify-production.js",
     "data:extract": "node scripts/extract-ideas-hub-data.js",
     "seed": "node src/seeds/index.js",
     "seed:reset": "node src/seeds/index.js --reset"
   },
-  "keywords": [
-    "context",
-    "express",
-    "mongodb",
-    "api"
-  ],
+  "keywords": ["context", "express", "mongodb", "api"],
   "author": "Kofi Arhin",
   "license": "ISC",
   "dependencies": {
