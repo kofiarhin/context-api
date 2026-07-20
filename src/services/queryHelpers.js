@@ -7,13 +7,16 @@ function escapeRegExp(value) {
 /**
  * Runs a bounded, lean collection query alongside its total count.
  *
- * `lean()` is used throughout because responses are built by serializers, so
- * hydrated Mongoose documents would be wasted work.
+ * Archived records are hidden unless the caller explicitly filters by status.
  */
 async function paginate(Model, filter, sort, pagination) {
+  const effectiveFilter = Object.prototype.hasOwnProperty.call(filter, 'status')
+    ? filter
+    : { ...filter, status: { $ne: 'archived' } };
+
   const [items, total] = await Promise.all([
-    Model.find(filter).sort(sort).skip(pagination.skip).limit(pagination.limit).lean(),
-    Model.countDocuments(filter),
+    Model.find(effectiveFilter).sort(sort).skip(pagination.skip).limit(pagination.limit).lean(),
+    Model.countDocuments(effectiveFilter),
   ]);
 
   return { items, total };

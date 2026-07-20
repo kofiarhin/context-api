@@ -1,14 +1,12 @@
 # Context API
 
-Context API is a read-oriented Node.js and Express service for structured, reusable context used by ChatGPT projects, coding agents, Architect workflows, the Ideas Hub, and future applications.
-
-The API stores context in separate MongoDB-backed domains and exposes only the records a client needs for a task.
+Context API is a Node.js, Express, MongoDB, and Mongoose service for structured context used by ChatGPT projects, coding agents, Architect workflows, the Ideas Hub, and future applications.
 
 ## Security status
 
-This MVP is intentionally unauthenticated and read-only while the architecture is being validated.
+This MVP is intentionally **public and unauthenticated**. Every caller can read, create, update, archive, and restore records.
 
-Treat every stored record as potentially publicly readable. Do not store secrets, passwords, access tokens, private keys, raw chat history, chain-of-thought, or sensitive personal context. Authentication and authorization are required before private data is stored or the service is exposed for production use.
+Do not store secrets, passwords, access tokens, private keys, private chat history, chain-of-thought, or sensitive personal information. Keep the existing rate limiting, CORS configuration, JSON body limit, schema validation, and safe logging enabled.
 
 ## Requirements
 
@@ -23,7 +21,7 @@ npm install
 cp .env.example .env
 ```
 
-Update `.env` with a local MongoDB connection string:
+Example environment:
 
 ```env
 NODE_ENV=development
@@ -35,98 +33,127 @@ RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX=100
 ```
 
-Never commit the populated `.env` file.
+Never commit a populated `.env` file.
 
 ## Commands
 
 ```bash
-npm start             # start the API
-npm run dev           # start with Node watch mode
-npm test              # run Jest tests serially
-npm run test:watch    # run Jest in watch mode
-npm run test:coverage # run tests with coverage
-npm run lint          # run ESLint
-npm run lint:fix      # apply safe ESLint fixes
-npm run format        # format files with Prettier
-npm run format:check  # verify formatting
-npm run seed          # idempotently seed all domains
-npm run seed:reset    # explicitly reset and reseed all domains
-```
-
-## Run locally
-
-Start MongoDB, seed representative context, then start the service:
-
-```bash
-npm run seed
 npm start
+npm run dev
+npm test
+npm run test:watch
+npm run test:coverage
+npm run lint
+npm run lint:fix
+npm run format
+npm run format:check
+npm run seed
+npm run seed:reset
 ```
-
-The default local URL is `http://localhost:4000`.
 
 ## API
 
-Health endpoint:
+Health:
 
 ```http
 GET /health
 ```
 
-Versioned read endpoints:
+Profile singleton:
+
+```http
+POST   /api/v1/profile
+GET    /api/v1/profile
+PATCH  /api/v1/profile
+DELETE /api/v1/profile
+```
+
+Collection domains:
 
 ```text
-GET /api/v1/profile
-GET /api/v1/coding-conventions
-GET /api/v1/coding-conventions/:key
-GET /api/v1/projects
-GET /api/v1/projects/:projectId
-GET /api/v1/tasks
-GET /api/v1/tasks/:taskId
-GET /api/v1/instruction-sets
-GET /api/v1/instruction-sets/:key
-GET /api/v1/ideas-hub
-GET /api/v1/ideas-hub/:section
-GET /api/v1/glossary
-GET /api/v1/glossary/:term
-GET /api/v1/learnings
-GET /api/v1/learnings/:learningId
+coding-conventions/:key
+projects/:projectId
+tasks/:taskId
+instruction-sets/:key
+ideas-hub/:section
+glossary/:term
+learnings/:learningId
 ```
 
-Collections support bounded pagination and their documented filters. Unknown query parameters and invalid route parameters are rejected.
+Each collection supports:
 
-### Success envelope
-
-```json
-{
-  "data": [],
-  "meta": {
-    "count": 0,
-    "version": "v1"
-  }
-}
+```http
+POST   /api/v1/<domain>
+GET    /api/v1/<domain>
+GET    /api/v1/<domain>/:identifier
+PATCH  /api/v1/<domain>/:identifier
+DELETE /api/v1/<domain>/:identifier
 ```
 
-### Error envelope
+`PUT` is intentionally not part of the simplified MVP.
 
-```json
-{
-  "error": {
-    "code": "RESOURCE_NOT_FOUND",
-    "message": "The requested resource was not found.",
-    "details": []
-  },
-  "meta": {
-    "correlationId": "generated-id",
-    "version": "v1"
-  }
-}
+## Write behavior
+
+- `POST` requires the domain's client-provided stable identifier.
+- `POST` returns `201 Created` and never performs an upsert.
+- Duplicate identifiers, including identifiers on archived records, return `409`.
+- `PATCH` partially updates schema-defined fields.
+- Stable identifiers and MongoDB-managed fields are immutable.
+- Unknown fields and invalid schema values return `400`.
+- `DELETE` is idempotent and performs a soft delete.
+- Soft deletion sets `status` to `archived` and records `archivedAt`.
+- Restore an archived record with `PATCH` by assigning a valid non-archived status.
+- Normal collection reads exclude archived records.
+- Use `?status=archived` to list archived records.
+- Individual resource reads can inspect archived records so agents can restore them.
+
+Example:
+
+```bash
+curl -X POST http://localhost:4000/api/v1/projects \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "projectId": "context-api",
+    "slug": "context-api",
+    "name": "Context API",
+    "status": "active",
+    "source": {
+      "type": "user-approved",
+      "reference": "kofiarhin/context-api"
+    }
+  }'
 ```
 
-## Seed behavior
+```bash
+curl -X PATCH http://localhost:4000/api/v1/projects/context-api \
+  -H 'Content-Type: application/json' \
+  -d '{"currentFocus":"Integrate agent context writes"}'
+```
 
-The default seed command validates records before writing, upserts by stable domain identifiers, reports inserted, updated, unchanged, and failed counts, and exits non-zero on validation or write failure.
+```bash
+curl -X DELETE http://localhost:4000/api/v1/projects/context-api
+```
 
-The default command does not drop collections. Reset behavior is only available through the explicit `seed:reset` command.
+```bash
+curl -X PATCH http://localhost:4000/api/v1/projects/context-api \
+  -H 'Content-Type: application/json' \
+  -d '{"status":"active"}'
+```
+
+## Response status codes
+
+```text
+POST    201 Created
+GET     200 OK
+PATCH   200 OK
+DELETE  200 OK
+
+Invalid request       400 Validation Error
+Unknown record        404 Not Found
+Duplicate identifier  409 Conflict
+Database unavailable  503 Service Unavailable
+Unexpected failure    500 Internal Server Error
+```
 
 ## Documentation
 

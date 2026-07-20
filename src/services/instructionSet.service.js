@@ -29,15 +29,27 @@ async function listInstructionSets(filters, pagination) {
 }
 
 /**
- * Returns the highest active or approved version for a key.
- *
- * Draft and superseded versions are never selected here, so publishing a new
- * draft cannot change what existing clients receive (SPEC §8.5, §18).
+ * Prefers the highest published version, then falls back to the latest stored
+ * version so an archived record remains directly inspectable and restorable.
  */
 async function getInstructionSetByKey(key) {
-  return InstructionSet.findOne({ key, status: { $in: PUBLISHED_STATUSES } })
+  const published = await InstructionSet.findOne({
+    key,
+    status: { $in: PUBLISHED_STATUSES },
+  })
     .sort({ version: -1 })
     .lean();
+
+  if (published) {
+    return published;
+  }
+
+  return InstructionSet.findOne({ key }).sort({ version: -1, updatedAt: -1 }).lean();
 }
 
-module.exports = { listInstructionSets, getInstructionSetByKey, buildFilter, SORT };
+module.exports = {
+  listInstructionSets,
+  getInstructionSetByKey,
+  buildFilter,
+  SORT,
+};

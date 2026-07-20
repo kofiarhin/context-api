@@ -43,16 +43,12 @@ describe('routing and envelope conventions', () => {
     expect(response.body.error.code).toBe('ROUTE_NOT_FOUND');
   });
 
-  it.each(['post', 'put', 'patch', 'delete'])(
-    'rejects %s with METHOD_NOT_ALLOWED because the API is read-only',
-    async (method) => {
-      const response = await request(app)[method]('/api/v1/projects');
+  it('does not expose PUT in the simplified CRUD MVP', async () => {
+    const response = await request(app).put('/api/v1/projects/context-api').send({ name: 'No' });
 
-      expect(response.status).toBe(405);
-      expect(response.body.error.code).toBe('METHOD_NOT_ALLOWED');
-      expect(response.headers.allow).toBe('GET, HEAD, OPTIONS');
-    }
-  );
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe('ROUTE_NOT_FOUND');
+  });
 
   it('rejects malformed JSON with a validation error', async () => {
     const response = await request(app)

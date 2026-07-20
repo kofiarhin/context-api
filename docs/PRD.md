@@ -1,556 +1,165 @@
 # Context API — Product Requirements Document
 
-**Version:** 0.1  
-**Status:** Draft / MVP approved for validation  
+**Version:** 0.2  
+**Status:** Approved for CRUD MVP  
 **Owner:** Kofi  
-**Last updated:** 2026-07-19
+**Last updated:** 2026-07-20
 
 ## 1. Product Overview
 
-Context API is a lightweight persistent-context service for ChatGPT projects, Architect, coding agents, and future applications.
+Context API is a centralized persistent-context service for ChatGPT projects, Architect workflows, coding agents, the Ideas Hub, and future applications.
 
-It externalizes durable user and project context from large static instruction sets into structured API resources. A client requests only the context required for the current task and receives a JSON response suitable for prompt injection or application use.
+It stores structured user, engineering, project, workflow, glossary, task, and learning context so clients can retrieve and update only the records needed for a task.
 
-The API is the source of truth for structured personal preferences, coding conventions, project context, Ideas Hub structure, task context, instruction sets, glossary entries, and durable learnings.
+## 2. Product Goal
 
-## 2. Problem Statement
+Provide a small, predictable MongoDB-backed API that AI agents can use as shared durable context.
 
-Long-lived AI projects accumulate profile information, engineering conventions, workflow rules, project knowledge, terminology, and learned preferences inside static instructions or repeated prompts.
+The MVP must support public, unauthenticated create, read, partial update, soft delete, and restore operations for every existing context domain.
 
-This creates several problems:
+## 3. Context Domains
 
-- Instructions become large and difficult to maintain.
-- The same context is duplicated across projects and tools.
-- Updates must be repeated in multiple locations.
-- Clients load irrelevant context and waste tokens.
-- Context has no consistent schema or API contract.
-- Durable knowledge is difficult to version, query, or reuse.
+- Profile
+- Coding conventions
+- Projects
+- Tasks
+- Instruction sets
+- Ideas Hub context
+- Glossary entries
+- Learnings
 
-## 3. Product Goal
+## 4. CRUD MVP Scope
 
-Build a centralized API that stores structured context and allows approved clients to retrieve only the context needed for a task.
+The supported operations are:
 
-Typical flow:
+```text
+POST    create
+GET     read
+PATCH   partial update or restore
+DELETE  soft delete
+```
 
-1. A client determines what context it needs.
-2. The client calls one or more Context API endpoints.
-3. The API reads the relevant records from the database.
-4. The API returns normalized JSON.
-5. The client injects or applies that context during its workflow.
+`PUT` is not included.
 
-## 4. MVP Objectives
+Every collection domain supports a collection route and a stable-identifier route. Profile remains a singleton resource.
 
-The MVP must:
+## 5. Stable Identifiers
 
-- Store context in clearly separated domains.
-- Expose read endpoints for each domain.
-- Return predictable JSON responses.
-- Support retrieving a collection or a single record where applicable.
-- Keep the initial implementation simple enough to validate the architecture quickly.
-- Document that authentication is intentionally deferred.
-- Avoid storing secrets, access tokens, passwords, or private keys.
+Clients supply stable identifiers when creating records:
 
-## 5. Non-Goals for MVP
+| Domain             | Stable identifier |
+| ------------------ | ----------------- |
+| Profile            | `key`             |
+| Coding conventions | `key`             |
+| Projects           | `projectId`       |
+| Tasks              | `taskId`          |
+| Instruction sets   | `key`             |
+| Ideas Hub context  | `section`         |
+| Glossary entries   | `normalizedKey`   |
+| Learnings          | `learningId`      |
 
-The MVP will not include:
+Stable identifiers cannot be changed through `PATCH`.
 
-- Authentication or authorization
-- Multi-user accounts
-- Role-based access control
-- A context-management dashboard
-- Semantic or vector search
-- Automatic AI learning ingestion
-- Webhooks or event synchronization
-- Full audit history
-- Encryption managed at the application layer
-- Advanced versioning or rollback
-- Public production readiness
+`POST` never behaves as an upsert. An identifier already used by an active or archived record returns `409 Conflict`.
 
-## 6. Target Consumers
+## 6. Soft Deletion
 
-Initial consumers include:
+`DELETE` does not permanently remove MongoDB documents.
 
-- ChatGPT project workflows
-- Architect instruction workflows
-- Coding agents
-- Local development tools
-- The Ideas Hub
-- Future personal productivity applications
+It sets:
 
-## 7. Context Domains
+```json
+{
+  "status": "archived",
+  "archivedAt": "2026-07-20T12:00:00.000Z"
+}
+```
 
-### 7.1 Profile
+Deletion is idempotent. Deleting an already archived record returns `200` with that archived resource.
 
-Stores durable information about the user and preferred interaction style.
+Archived records are excluded from normal collection reads. They remain available through `?status=archived` and individual resource reads.
 
-Example fields:
+Restore uses the existing `PATCH` endpoint by changing `status` to a valid non-archived value. The API clears `archivedAt` automatically.
 
-- display name
-- professional roles
-- preferred technology stack
-- response preferences
-- testing preferences
-- default architecture preferences
-- content and communication preferences
+## 7. Profile Singleton
 
-### 7.2 Coding Conventions
+Profile supports:
 
-Stores reusable engineering rules and standards.
+```http
+POST   /api/v1/profile
+GET    /api/v1/profile
+PATCH  /api/v1/profile
+DELETE /api/v1/profile
+```
 
-Example categories:
+Only one non-archived profile may exist. Creating another returns `409 Conflict`.
 
-- frontend conventions
-- backend conventions
-- TypeScript and JavaScript conventions
-- folder structures
-- naming conventions
-- testing conventions
-- state-management rules
-- API design conventions
-- environment-variable conventions
-- dependency preferences
+After archival, the archived profile can be restored using `PATCH`, or a new profile with a different stable key can be created.
 
-Conventions should be independently addressable so a client can request only the relevant language, framework, layer, or project scope.
+## 8. Validation
 
-### 7.3 Projects
-
-Stores structured project-level context.
-
-Example fields:
-
-- project ID and slug
-- name and summary
-- lifecycle state
-- repository URL
-- live URL
-- technology stack
-- current focus
-- milestones
-- architecture summary
-- related context references
-
-The Ideas Hub remains the durable narrative source for project knowledge unless a later decision changes that responsibility. Context API may expose indexed or normalized project context without silently replacing Ideas Hub governance.
-
-### 7.4 Tasks
-
-Stores task context that clients may retrieve and act upon.
-
-Example fields:
-
-- task ID
-- title and description
-- project reference
-- status
-- priority
-- acceptance criteria
-- dependencies
-- source reference
-- created and updated timestamps
-
-Initial task support is read-oriented. The MVP does not attempt to become a complete project-management system.
-
-### 7.5 Instruction Sets
-
-Stores reusable instruction fragments and workflow rules.
-
-Examples:
-
-- discovery workflow
-- specification workflow
-- implementation workflow
-- verification workflow
-- code-review workflow
-- documentation workflow
-- repository update workflow
-
-Instruction sets should be modular, versionable, and retrievable by key so clients do not need to load every instruction for every task.
-
-### 7.6 Ideas Hub Metadata
-
-Stores structured information describing how the Ideas Hub is organized and governed.
-
-Example content:
-
-- canonical files and their responsibilities
-- repository layout
-- project record structure
-- lifecycle definitions
-- workflow definitions
-- source-of-truth rules
-- record relationships
-- update-routing rules
-
-This domain allows a client to understand the Ideas Hub without embedding its full architecture in static project instructions.
-
-### 7.7 Glossary
-
-Stores indexed terminology used across projects and workflows.
-
-Example fields:
-
-- term
-- normalized key
-- definition
-- aliases
-- scope
-- related terms
-- source reference
-
-Examples include Architect, Ideas Hub, Discovery, Shared Understanding, Ready Task, Verification, Run, and Workflow.
-
-### 7.8 Learnings
-
-Stores durable, reviewed learnings that are useful across future interactions.
-
-Examples:
-
-- stable user preferences
-- successful workflow patterns
-- architecture decisions
-- recurring mistakes to avoid
-- durable lessons from completed work
-
-Temporary observations, sensitive personal data, raw chat history, and unverified assumptions must not be promoted automatically into durable learnings.
-
-## 8. Proposed API
-
-All endpoints are initially versioned under `/api/v1`.
-
-### Health
-
-- `GET /health`
-
-Returns service status and basic environment metadata that does not expose secrets.
-
-### Profile
-
-- `GET /api/v1/profile`
-
-### Coding conventions
-
-- `GET /api/v1/coding-conventions`
-- `GET /api/v1/coding-conventions/:key`
-
-Suggested filters:
-
-- `scope`
-- `technology`
-- `layer`
-- `project`
-
-### Projects
-
-- `GET /api/v1/projects`
-- `GET /api/v1/projects/:projectId`
-
-Suggested filters:
-
-- `status`
-- `technology`
-- `updatedAfter`
-
-### Tasks
-
-- `GET /api/v1/tasks`
-- `GET /api/v1/tasks/:taskId`
-
-Suggested filters:
-
-- `projectId`
-- `status`
-- `priority`
-
-### Instruction sets
-
-- `GET /api/v1/instruction-sets`
-- `GET /api/v1/instruction-sets/:key`
-
-### Ideas Hub
-
-- `GET /api/v1/ideas-hub`
-- `GET /api/v1/ideas-hub/:section`
-
-### Glossary
-
-- `GET /api/v1/glossary`
-- `GET /api/v1/glossary/:term`
-
-Suggested filters:
-
-- `query`
-- `scope`
-
-### Learnings
-
-- `GET /api/v1/learnings`
-- `GET /api/v1/learnings/:learningId`
-
-Suggested filters:
-
-- `category`
-- `projectId`
-- `status`
+- Writes accept only fields defined by the domain's current Mongoose schema.
+- `POST` requires the stable identifier and all schema-required fields.
+- `PATCH` requires at least one valid field.
+- Unknown fields return `400`.
+- `_id`, `__v`, `createdAt`, `updatedAt`, and `archivedAt` are API-managed and cannot be supplied.
+- Nested schema validation remains enforced by Mongoose.
+- Existing JSON payload and query-string size limits remain enabled.
 
 ## 9. Response Contract
 
-Successful collection response:
+Successful writes return the resulting serialized resource using the existing envelope.
 
-```json
-{
-  "data": [],
-  "meta": {
-    "count": 0,
-    "version": "v1"
-  }
-}
+```text
+POST    201 Created
+GET     200 OK
+PATCH   200 OK
+DELETE  200 OK
 ```
 
-Successful single-resource response:
+Errors:
 
-```json
-{
-  "data": {},
-  "meta": {
-    "version": "v1"
-  }
-}
+```text
+400  VALIDATION_ERROR
+404  RESOURCE_NOT_FOUND or ROUTE_NOT_FOUND
+409  RESOURCE_CONFLICT
+500  INTERNAL_SERVER_ERROR
+503  DATABASE_UNAVAILABLE
 ```
 
-Error response:
+## 10. Security Posture
 
-```json
-{
-  "error": {
-    "code": "RESOURCE_NOT_FOUND",
-    "message": "The requested resource was not found."
-  }
-}
-```
+The MVP is intentionally public and unauthenticated so AI agents can read and update context without credentials.
 
-## 10. Proposed Data Model
+Anyone who discovers the API URL can modify or archive records. Therefore:
 
-Suggested MongoDB collections:
+- never store secrets, credentials, private keys, tokens, chain-of-thought, or sensitive personal context;
+- retain rate limiting, CORS configuration, payload limits, safe logging, and explicit serializers;
+- treat authentication and authorization as deferred work before storing private or production-sensitive data.
 
-- `profiles`
-- `coding_conventions`
-- `projects`
-- `tasks`
-- `instruction_sets`
-- `ideas_hub_context`
-- `glossary_entries`
-- `learnings`
+## 11. Out of Scope
 
-Shared document fields where applicable:
+- Authentication and authorization
+- API keys
+- Multi-user ownership
+- Role-based access control
+- `PUT`
+- Permanent deletion
+- Dedicated restore endpoints
+- Audit history and rollback
+- Webhooks
+- Management dashboard
+- Automatic upserts
 
-- `_id`
-- `key` or `slug`
-- `title`
-- `description` or `content`
-- `scope`
-- `tags`
-- `source`
-- `status`
-- `version`
-- `createdAt`
-- `updatedAt`
+## 12. Acceptance Criteria
 
-Records should use stable machine-readable keys and human-readable labels. References should use IDs or stable slugs rather than duplicated free-text names.
-
-## 11. Functional Requirements
-
-### FR-1: Domain retrieval
-
-The API must return context grouped by its defined domain.
-
-### FR-2: Targeted retrieval
-
-Clients must be able to retrieve a single record or filtered subset without downloading the entire context database.
-
-### FR-3: Predictable responses
-
-All endpoints must use a consistent success and error envelope.
-
-### FR-4: Input validation
-
-Route parameters and query parameters must be validated even though authentication is deferred.
-
-### FR-5: Safe serialization
-
-Responses must not include database internals or environment secrets.
-
-### FR-6: Health monitoring
-
-The service must expose a health endpoint that confirms application and database availability.
-
-### FR-7: Seed data
-
-The repository must support repeatable seed data for local MVP validation.
-
-### FR-8: Source traceability
-
-Context records should support a source reference so clients can distinguish user-approved knowledge, Ideas Hub-derived knowledge, and system-generated records.
-
-## 12. Non-Functional Requirements
-
-- Node.js and Express backend
-- MongoDB persistence
-- Environment variables for deployment configuration
-- JSON-only API responses for MVP
-- Clear separation between routes, controllers, services, models, and validation
-- Jest tests for backend behavior
-- Deterministic seed process
-- Useful request and error logging without sensitive values
-- API versioning from the first public route
-
-## 13. Security Position for MVP
-
-Authentication is deliberately excluded from the proof-of-concept implementation.
-
-The initial deployment may rely on an undisclosed URL and restricted usage while validating the idea. This is security by obscurity and is not sufficient for a public or production service.
-
-MVP safeguards still required:
-
-- Never commit or store secrets in context records.
-- Use environment variables for database URLs and deployment settings.
-- Validate all request parameters.
-- Limit response fields.
-- Add basic rate limiting when exposed to the internet.
-- Configure CORS deliberately rather than allowing every origin by default.
-- Avoid write endpoints until authentication and authorization are implemented.
-- Treat all stored MVP data as potentially publicly readable.
-
-Before storing private or sensitive context, the API must add proper authentication and authorization.
-
-## 14. Future Security Requirements
-
-A production-ready version should support:
-
-- Bearer token or API-key authentication
-- Per-client credentials
-- Hashed credential storage
-- Credential rotation and revocation
-- Role- and scope-based authorization
-- Separate read and write permissions
-- Rate limiting and abuse controls
-- Audit logs
-- Request correlation IDs
-- Secret-manager integration
-- Encryption in transit and at rest
-- Optional request signing for trusted service-to-service calls
-
-## 15. Edge Cases
-
-The implementation must account for:
-
-- Missing context records
-- Duplicate keys or glossary aliases
-- Conflicting conventions across global and project scopes
-- Stale or superseded learnings
-- Deleted or renamed projects
-- Circular references between context records
-- Large context payloads
-- Invalid filters
-- Unknown API versions
-- Database unavailability
-- Partial seed failures
-- A client requesting private data before authentication exists
-- Instruction-set changes that could break older clients
-- Ideas Hub and Context API records becoming inconsistent
-
-Precedence rules for conflicting context should be explicit. A sensible future default is project-specific context over global context, with higher version and approved status considered before draft records.
-
-## 16. Observability
-
-The MVP should log:
-
-- request method and route
-- response status
-- duration
-- correlation ID
-- database connection failures
-- validation failures
-
-Logs must not include full context payloads, secrets, tokens, or private database connection strings.
-
-## 17. Testing Requirements
-
-The backend test suite should cover:
-
-- health endpoint behavior
-- successful collection retrieval
-- successful single-resource retrieval
-- missing-resource errors
-- invalid query and route parameters
-- database/service failures
-- response-envelope consistency
-- filtering behavior
-- seed-data integrity
-
-Jest is the default backend test framework.
-
-## 18. MVP Acceptance Criteria
-
-The MVP is complete when:
-
-- The service can be installed and run locally.
-- MongoDB stores the defined context domains.
-- Seed data can populate representative records.
-- Every MVP read endpoint returns the documented response envelope.
-- Filtering works for the primary use cases.
-- Validation and error handling are covered by tests.
-- No secrets are committed or returned.
-- A sample client can request coding conventions, project context, instruction sets, glossary entries, and Ideas Hub metadata independently.
-- The repository documents the temporary unauthenticated security posture.
-- Authentication remains clearly identified as required before private or production use.
-
-## 19. Success Metrics
-
-The architecture is validated when:
-
-- A client retrieves only the context required for a task.
-- Updating a database record changes future responses without editing static project instructions.
-- The same context can be reused by more than one client.
-- Context payload size is meaningfully smaller than loading all instructions every time.
-- Context domains remain understandable and maintainable as records are added.
-
-## 20. Delivery Phases
-
-### Phase 1 — Foundation
-
-- Express application structure
-- MongoDB connection
-- health endpoint
-- error handling
-- validation foundation
-- test setup
-
-### Phase 2 — Read API
-
-- schemas and seed data
-- profile endpoint
-- coding conventions endpoints
-- projects endpoints
-- instruction sets endpoints
-- Ideas Hub endpoints
-- glossary endpoints
-- learnings endpoints
-- task endpoints
-
-### Phase 3 — Validation
-
-- sample client integration
-- payload-size comparison
-- missing and conflicting context tests
-- deployment test
-- MVP findings and architecture decision
-
-### Phase 4 — Security and Writes
-
-Deferred until the MVP proves useful:
-
-- authentication
-- authorization
-- write endpoints
-- audit history
-- context-management UI
-- controlled learning ingestion
+- Every existing domain supports the approved methods.
+- Existing read filters and pagination continue to work.
+- Archived records are hidden by default and explicitly queryable.
+- Duplicate identifiers return `409`.
+- Invalid and unknown fields return `400`.
+- Unknown identifiers return `404`.
+- Soft delete, idempotent delete, and restore work consistently.
+- MongoDB internals remain excluded from responses.
+- Jest and Supertest cover representative CRUD behavior across every domain.
+- Linting, formatting, and tests pass before deployment.

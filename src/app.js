@@ -10,7 +10,6 @@ const v1Router = require('./routes/v1');
 const correlationId = require('./middleware/correlationId');
 const requestLogger = require('./middleware/requestLogger');
 const queryLimits = require('./middleware/queryLimits');
-const readOnly = require('./middleware/readOnly');
 const requireDatabase = require('./middleware/requireDatabase');
 const notFound = require('./middleware/notFound');
 const errorHandler = require('./middleware/errorHandler');
@@ -43,7 +42,7 @@ function createApp(options = {}) {
 
   app.get('/health', getHealth);
 
-  app.use('/api/v1', createRateLimiter(env), readOnly, requireDatabase, v1Router);
+  app.use('/api/v1', createRateLimiter(env), requireDatabase, v1Router);
 
   app.use(notFound);
   app.use(errorHandler);

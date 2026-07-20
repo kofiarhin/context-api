@@ -15,6 +15,10 @@ function buildFilter(filters = {}) {
     filter.scope = filters.scope;
   }
 
+  if (filters.status) {
+    filter.status = filters.status;
+  }
+
   if (filters.query) {
     const pattern = new RegExp(escapeRegExp(filters.query), 'i');
     filter.$or = [{ term: pattern }, { aliases: pattern }, { definition: pattern }];
@@ -32,8 +36,7 @@ async function listGlossaryEntries(filters, pagination) {
  *
  * The normalized key is authoritative and checked first. Aliases are only
  * consulted when no key matches, and an alias shared by several published
- * entries raises an explicit conflict rather than returning an arbitrary one
- * (SPEC §8.7).
+ * entries raises an explicit conflict rather than returning an arbitrary one.
  */
 async function getGlossaryEntryByTerm(rawTerm) {
   const normalized = normalizeTerm(rawTerm);
@@ -42,7 +45,9 @@ async function getGlossaryEntryByTerm(rawTerm) {
     return null;
   }
 
-  const byKey = await GlossaryEntry.findOne({ normalizedKey: normalized }).lean();
+  const byKey = await GlossaryEntry.findOne({
+    normalizedKey: normalized,
+  }).lean();
 
   if (byKey) {
     return byKey;
@@ -58,11 +63,19 @@ async function getGlossaryEntryByTerm(rawTerm) {
   if (byAlias.length > 1) {
     throw new AmbiguousResourceError(
       `The alias "${normalized}" matches more than one glossary entry.`,
-      byAlias.map((entry) => ({ field: 'term', message: `Matches "${entry.normalizedKey}".` }))
+      byAlias.map((entry) => ({
+        field: 'term',
+        message: `Matches "${entry.normalizedKey}".`,
+      }))
     );
   }
 
   return byAlias[0] || null;
 }
 
-module.exports = { listGlossaryEntries, getGlossaryEntryByTerm, buildFilter, SORT };
+module.exports = {
+  listGlossaryEntries,
+  getGlossaryEntryByTerm,
+  buildFilter,
+  SORT,
+};

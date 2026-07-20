@@ -3,40 +3,102 @@
 const { Router } = require('express');
 
 const controller = require('../../controllers/context.controller');
-const { validateQuery, validateParam } = require('../../middleware/validate');
+const crudController = require('../../controllers/crud.controller');
+const { validateQuery, validateParam, validateBody } = require('../../middleware/validate');
 const schemas = require('../../validation/schemas');
 
 const router = Router();
 
+router.post('/profile', validateBody('profile', 'create'), crudController.create('profile'));
 router.get('/profile', validateQuery(schemas.validateProfileQuery), controller.getProfile);
+router.patch('/profile', validateBody('profile', 'patch'), crudController.patch('profile'));
+router.delete('/profile', crudController.remove('profile'));
 
-router.get(
-  '/coding-conventions',
-  validateQuery(schemas.validateCodingConventionQuery),
-  controller.listCodingConventions
-);
-router.get('/coding-conventions/:key', validateParam('key'), controller.getCodingConvention);
+function registerCollection({
+  path,
+  domainName,
+  paramName,
+  queryValidator,
+  listHandler,
+  getHandler,
+}) {
+  router.post(path, validateBody(domainName, 'create'), crudController.create(domainName));
+  router.get(path, validateQuery(queryValidator), listHandler);
+  router.get(`${path}/:${paramName}`, validateParam(paramName), getHandler);
+  router.patch(
+    `${path}/:${paramName}`,
+    validateParam(paramName),
+    validateBody(domainName, 'patch'),
+    crudController.patch(domainName, paramName)
+  );
+  router.delete(
+    `${path}/:${paramName}`,
+    validateParam(paramName),
+    crudController.remove(domainName, paramName)
+  );
+}
 
-router.get('/projects', validateQuery(schemas.validateProjectQuery), controller.listProjects);
-router.get('/projects/:projectId', validateParam('projectId'), controller.getProject);
+registerCollection({
+  path: '/coding-conventions',
+  domainName: 'codingConventions',
+  paramName: 'key',
+  queryValidator: schemas.validateCodingConventionQuery,
+  listHandler: controller.listCodingConventions,
+  getHandler: controller.getCodingConvention,
+});
 
-router.get(
-  '/instruction-sets',
-  validateQuery(schemas.validateInstructionSetQuery),
-  controller.listInstructionSets
-);
-router.get('/instruction-sets/:key', validateParam('key'), controller.getInstructionSet);
+registerCollection({
+  path: '/projects',
+  domainName: 'projects',
+  paramName: 'projectId',
+  queryValidator: schemas.validateProjectQuery,
+  listHandler: controller.listProjects,
+  getHandler: controller.getProject,
+});
 
-router.get('/ideas-hub', validateQuery(schemas.validateIdeasHubQuery), controller.listIdeasHubSections);
-router.get('/ideas-hub/:section', validateParam('section'), controller.getIdeasHubSection);
+registerCollection({
+  path: '/tasks',
+  domainName: 'tasks',
+  paramName: 'taskId',
+  queryValidator: schemas.validateTaskQuery,
+  listHandler: controller.listTasks,
+  getHandler: controller.getTask,
+});
 
-router.get('/glossary', validateQuery(schemas.validateGlossaryQuery), controller.listGlossaryEntries);
-router.get('/glossary/:term', validateParam('term'), controller.getGlossaryEntry);
+registerCollection({
+  path: '/instruction-sets',
+  domainName: 'instructionSets',
+  paramName: 'key',
+  queryValidator: schemas.validateInstructionSetQuery,
+  listHandler: controller.listInstructionSets,
+  getHandler: controller.getInstructionSet,
+});
 
-router.get('/learnings', validateQuery(schemas.validateLearningQuery), controller.listLearnings);
-router.get('/learnings/:learningId', validateParam('learningId'), controller.getLearning);
+registerCollection({
+  path: '/ideas-hub',
+  domainName: 'ideasHub',
+  paramName: 'section',
+  queryValidator: schemas.validateIdeasHubQuery,
+  listHandler: controller.listIdeasHubSections,
+  getHandler: controller.getIdeasHubSection,
+});
 
-router.get('/tasks', validateQuery(schemas.validateTaskQuery), controller.listTasks);
-router.get('/tasks/:taskId', validateParam('taskId'), controller.getTask);
+registerCollection({
+  path: '/glossary',
+  domainName: 'glossary',
+  paramName: 'term',
+  queryValidator: schemas.validateGlossaryQuery,
+  listHandler: controller.listGlossaryEntries,
+  getHandler: controller.getGlossaryEntry,
+});
+
+registerCollection({
+  path: '/learnings',
+  domainName: 'learnings',
+  paramName: 'learningId',
+  queryValidator: schemas.validateLearningQuery,
+  listHandler: controller.listLearnings,
+  getHandler: controller.getLearning,
+});
 
 module.exports = router;

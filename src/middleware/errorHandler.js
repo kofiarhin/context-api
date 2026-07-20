@@ -5,6 +5,7 @@ const { buildErrorBody } = require('../utils/responses');
 const {
   AppError,
   ValidationError,
+  ConflictError,
   DatabaseUnavailableError,
   InternalServerError,
 } = require('../utils/errors');
@@ -32,9 +33,25 @@ function translate(error) {
     return new DatabaseUnavailableError();
   }
 
+  if (error.code === 11000) {
+    const fields = Object.keys(error.keyPattern || error.keyValue || {});
+    const details = fields.map((field) => ({
+      field,
+      message: 'Value must be unique.',
+    }));
+
+    return new ConflictError('A resource with the same identifier already exists.', details);
+  }
+
   if (error.name === 'CastError') {
     return new ValidationError('Request validation failed.', [
       { field: error.path, message: 'Value is not a valid identifier.' },
+    ]);
+  }
+
+  if (error.name === 'StrictModeError') {
+    return new ValidationError('Request validation failed.', [
+      { field: error.path || 'body', message: 'Unknown field.' },
     ]);
   }
 
@@ -55,14 +72,16 @@ function translate(error) {
 
   if (error.type === 'entity.too.large') {
     return new ValidationError('Request validation failed.', [
-      { field: 'body', message: 'Request body exceeds the configured size limit.' },
+      {
+        field: 'body',
+        message: 'Request body exceeds the configured size limit.',
+      },
     ]);
   }
 
   return new InternalServerError();
 }
 
-// eslint-disable-next-line no-unused-vars -- Express identifies error middleware by arity.
 function errorHandler(error, req, res, next) {
   const translated = translate(error);
 

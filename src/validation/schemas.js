@@ -46,6 +46,7 @@ const QUERY_SCHEMAS = {
   glossary: {
     query: { type: 'search', maxLength: 128 },
     scope: { type: 'enum', values: SCOPES },
+    status: { type: 'enum', values: STATUSES },
   },
 
   learnings: {

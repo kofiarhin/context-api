@@ -22,6 +22,7 @@ function sharedFields(overrides = {}) {
     tags: { type: [String], default: () => [] },
     source: { type: sourceSchema, required: true },
     status: { type: String, enum: STATUSES, required: true, default: 'draft' },
+    archivedAt: { type: Date, default: null },
     version: { type: Number, default: 1, min: 1 },
     ...overrides,
   };

@@ -32,6 +32,7 @@ function baseFields(doc) {
     tags: toArray(doc.tags),
     source: serializeSource(doc.source),
     status: doc.status,
+    archivedAt: toIso(doc.archivedAt),
     version: doc.version,
     createdAt: toIso(doc.createdAt),
     updatedAt: toIso(doc.updatedAt),
@@ -107,6 +108,7 @@ function serializeTask(doc) {
     dependencies: toArray(doc.dependencies),
     tags: toArray(doc.tags),
     source: serializeSource(doc.source),
+    archivedAt: toIso(doc.archivedAt),
     createdAt: toIso(doc.createdAt),
     updatedAt: toIso(doc.updatedAt),
   };

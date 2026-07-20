@@ -38,8 +38,17 @@ class RouteNotFoundError extends AppError {
 }
 
 class MethodNotAllowedError extends AppError {
-  constructor(message = 'This API is read-only and only supports GET requests.', details = []) {
+  constructor(
+    message = 'This HTTP method is not supported for the requested route.',
+    details = []
+  ) {
     super('METHOD_NOT_ALLOWED', message, 405, details);
+  }
+}
+
+class ConflictError extends AppError {
+  constructor(message = 'The request conflicts with an existing resource.', details = []) {
+    super('RESOURCE_CONFLICT', message, 409, details);
   }
 }
 
@@ -67,6 +76,7 @@ module.exports = {
   ResourceNotFoundError,
   RouteNotFoundError,
   MethodNotAllowedError,
+  ConflictError,
   AmbiguousResourceError,
   DatabaseUnavailableError,
   InternalServerError,

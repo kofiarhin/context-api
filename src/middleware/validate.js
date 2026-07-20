@@ -1,11 +1,12 @@
 'use strict';
 
 const { validateIdentifierParam } = require('../validation/common');
+const { validateWriteBody } = require('../validation/write');
 
 /**
  * Validation runs as middleware so it always completes before a controller is
- * invoked (SPEC §10). Validators throw synchronously and Express routes the
- * resulting ValidationError to the centralized error handler.
+ * invoked. Validators throw synchronously and Express routes the resulting
+ * ValidationError to the centralized error handler.
  */
 function validateQuery(validator) {
   return function queryValidator(req, res, next) {
@@ -29,4 +30,13 @@ function validateParam(name) {
   };
 }
 
-module.exports = { validateQuery, validateParam };
+function validateBody(domainName, mode) {
+  return function bodyValidator(req, res, next) {
+    const body = validateWriteBody(domainName, mode, req.body);
+
+    req.validated = { ...(req.validated || {}), body };
+    next();
+  };
+}
+
+module.exports = { validateQuery, validateParam, validateBody };
