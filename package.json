@@ -4,7 +4,7 @@
   "description": "Read-oriented API for structured, reusable user, engineering, project, workflow, glossary, and learning context.",
   "main": "src/server.js",
   "engines": {
-    "node": ">=20.19.0"
+    "node": "24.x"
   },
   "scripts": {
     "start": "node src/server.js",
