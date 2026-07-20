@@ -80,6 +80,14 @@ describe('shipped seed data', () => {
     });
   });
 
+  it('scopes every task to a seeded project', () => {
+    const projectIds = new Set(domainRecords('projects').map((project) => project.projectId));
+
+    domainRecords('tasks').forEach((task) => {
+      expect(projectIds.has(task.projectId)).toBe(true);
+    });
+  });
+
   it('spreads tasks across projects, statuses, and priorities', () => {
     const tasks = domainRecords('tasks');
 
