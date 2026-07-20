@@ -1,0 +1,156 @@
+'use strict';
+
+module.exports = [
+  {
+    learningId: 'prefer-stable-keys-over-object-ids',
+    title: 'Address records by stable domain keys, not database IDs',
+    content:
+      'Public routes that expose MongoDB ObjectIds couple clients to storage. Stable keys such as projectId, key, and normalizedKey stay valid across reseeds and migrations, and make seed upserts idempotent.',
+    category: 'architecture',
+    projectId: 'context-api',
+    evidence: [
+      { type: 'repository', reference: 'kofiarhin/context-api/docs/SPEC.md#7-shared-data-rules', note: 'Shared data rules.' },
+      { type: 'repository', reference: 'kofiarhin/context-api/docs/SPEC.md#10-validation', note: 'Object IDs accepted only where explicit.' },
+    ],
+    reviewStatus: 'reviewed',
+    supersedes: null,
+    tags: ['api', 'data-model'],
+    source: { type: 'user-approved', reference: 'kofiarhin/context-api/docs/SPEC.md' },
+    status: 'active',
+    version: 1,
+  },
+  {
+    learningId: 'reject-unknown-query-parameters',
+    title: 'Reject unknown query parameters instead of ignoring them',
+    content:
+      'Silently ignoring an unrecognized filter returns a wider result set than the caller asked for, which looks like correct data. Rejecting unknown parameters turns a client typo into an immediate 400.',
+    category: 'pitfall',
+    projectId: 'context-api',
+    evidence: [
+      { type: 'repository', reference: 'kofiarhin/context-api/docs/SPEC.md#64-query-behavior', note: null },
+    ],
+    reviewStatus: 'reviewed',
+    supersedes: null,
+    tags: ['api', 'validation'],
+    source: { type: 'user-approved', reference: 'kofiarhin/context-api/docs/SPEC.md#64-query-behavior' },
+    status: 'active',
+    version: 1,
+  },
+  {
+    learningId: 'surface-conflicts-rather-than-resolving-silently',
+    title: 'Surface context conflicts instead of resolving them silently',
+    content:
+      'When a project-scoped and a global convention disagree, returning only the winner hides the disagreement. Collection endpoints return both; precedence is applied only where a caller explicitly asks for one effective record.',
+    category: 'architecture',
+    projectId: null,
+    evidence: [
+      { type: 'repository', reference: 'kofiarhin/context-api/docs/SPEC.md#82-coding-convention', note: 'Precedence rules.' },
+    ],
+    reviewStatus: 'reviewed',
+    supersedes: null,
+    tags: ['precedence', 'governance'],
+    source: { type: 'user-approved', reference: 'kofiarhin/context-api/docs/SPEC.md#82-coding-convention' },
+    status: 'active',
+    version: 1,
+  },
+  {
+    learningId: 'validate-before-controllers',
+    title: 'Run validation as middleware, before controllers',
+    content:
+      'Validating inside a controller mixes transport concerns with domain logic and makes it easy to skip a check on one route. Validation middleware guarantees every handler receives already-checked input.',
+    category: 'workflow',
+    projectId: 'context-api',
+    evidence: [
+      { type: 'repository', reference: 'kofiarhin/context-api/docs/SPEC.md#10-validation', note: null },
+    ],
+    reviewStatus: 'reviewed',
+    supersedes: null,
+    tags: ['validation'],
+    source: { type: 'user-approved', reference: 'kofiarhin/context-api/docs/SPEC.md#10-validation' },
+    status: 'active',
+    version: 1,
+  },
+  {
+    learningId: 'unauthenticated-deployment-is-not-private',
+    title: 'An undisclosed URL is not access control',
+    content:
+      'Relying on an unguessable deployment URL is security by obscurity. Until authentication exists, every stored record must be treated as potentially publicly readable, which rules out private context.',
+    category: 'preference',
+    projectId: null,
+    evidence: [
+      { type: 'repository', reference: 'kofiarhin/context-api/docs/PRD.md#13-security-position-for-mvp', note: null },
+    ],
+    reviewStatus: 'reviewed',
+    supersedes: null,
+    tags: ['security'],
+    source: { type: 'user-approved', reference: 'kofiarhin/context-api/docs/PRD.md#13-security-position-for-mvp' },
+    status: 'active',
+    version: 1,
+  },
+  {
+    learningId: 'cache-context-responses-client-side',
+    title: 'Clients may benefit from caching context responses',
+    content:
+      'Unverified observation: repeated retrieval of the same instruction set within one workflow run looks redundant. Needs measurement before it becomes guidance.',
+    category: 'workflow',
+    projectId: 'context-api',
+    evidence: [],
+    reviewStatus: 'unreviewed',
+    supersedes: null,
+    tags: ['performance', 'assumption'],
+    source: { type: 'system-generated', reference: 'kofiarhin/context-api/docs/IMPLEMENTATION_PLAN.md#11-phase-7' },
+    status: 'draft',
+    version: 1,
+  },
+  {
+    learningId: 'single-context-endpoint-is-sufficient',
+    title: 'A single combined context endpoint is sufficient',
+    content:
+      'Superseded. A combined endpoint reintroduces exactly the oversized payload problem the API exists to solve. Replaced by domain-specific routes with pagination.',
+    category: 'architecture',
+    projectId: 'context-api',
+    evidence: [
+      { type: 'repository', reference: 'kofiarhin/context-api/docs/SPEC.md#17-performance-boundaries', note: 'No endpoint returns all domains.' },
+    ],
+    reviewStatus: 'reviewed',
+    supersedes: null,
+    tags: ['api'],
+    source: { type: 'system-generated', reference: 'kofiarhin/context-api/docs/SPEC.md#17-performance-boundaries' },
+    status: 'superseded',
+    version: 1,
+  },
+  {
+    learningId: 'domain-specific-routes-bound-payload-size',
+    title: 'Domain-specific routes keep payloads bounded',
+    content:
+      'Splitting retrieval by domain lets a client fetch only the conventions or instruction set a task needs, which is what makes the payload reduction measurable.',
+    category: 'architecture',
+    projectId: 'context-api',
+    evidence: [
+      { type: 'repository', reference: 'kofiarhin/context-api/docs/PRD.md#19-success-metrics', note: null },
+    ],
+    reviewStatus: 'reviewed',
+    supersedes: 'single-context-endpoint-is-sufficient',
+    tags: ['api', 'performance'],
+    source: { type: 'user-approved', reference: 'kofiarhin/context-api/docs/PRD.md#19-success-metrics' },
+    status: 'active',
+    version: 2,
+  },
+  {
+    learningId: 'seed-reruns-must-be-idempotent',
+    title: 'Seed reruns must be idempotent',
+    content:
+      'Seeding by insert duplicates canonical records on the second run. Upserting by stable key keeps reruns safe and makes "unchanged" a meaningful signal that data already matches.',
+    category: 'process',
+    projectId: 'context-api',
+    evidence: [
+      { type: 'repository', reference: 'kofiarhin/context-api/docs/SPEC.md#12-seed-data', note: null },
+    ],
+    reviewStatus: 'reviewed',
+    supersedes: null,
+    tags: ['seeds'],
+    source: { type: 'user-approved', reference: 'kofiarhin/context-api/docs/SPEC.md#12-seed-data' },
+    status: 'active',
+    version: 1,
+  },
+];
