@@ -1,0 +1,37 @@
+{
+  "name": "Context API",
+  "description": "Public read-only API for structured reusable context.",
+  "repository": "https://github.com/kofiarhin/context-api",
+  "keywords": ["node", "express", "mongodb", "api"],
+  "env": {
+    "NODE_ENV": {
+      "description": "Application environment.",
+      "value": "production",
+      "required": true
+    },
+    "MONGODB_URI": {
+      "description": "MongoDB Atlas connection string.",
+      "required": true
+    },
+    "LOG_LEVEL": {
+      "description": "Minimum structured log level.",
+      "value": "info",
+      "required": false
+    },
+    "CORS_ORIGINS": {
+      "description": "Comma-separated browser origins. Use * for a public browser-consumable API.",
+      "value": "*",
+      "required": false
+    },
+    "RATE_LIMIT_WINDOW_MS": {
+      "description": "Rate-limit window in milliseconds.",
+      "value": "900000",
+      "required": false
+    },
+    "RATE_LIMIT_MAX": {
+      "description": "Maximum requests per client per window.",
+      "value": "100",
+      "required": false
+    }
+  }
+}
