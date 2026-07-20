@@ -23,7 +23,12 @@
     "seed": "node src/seeds/index.js",
     "seed:reset": "node src/seeds/index.js --reset"
   },
-  "keywords": ["context", "express", "mongodb", "api"],
+  "keywords": [
+    "context",
+    "express",
+    "mongodb",
+    "api"
+  ],
   "author": "Kofi Arhin",
   "license": "ISC",
   "dependencies": {
