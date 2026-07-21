@@ -90,7 +90,8 @@ PATCH  /api/v1/<domain>/:identifier
 DELETE /api/v1/<domain>/:identifier
 ```
 
-`PUT` is intentionally not part of the simplified MVP.
+`PUT` is intentionally not part of the simplified MVP. Because updates are partial, `PUT` and any
+other unsupported verb return `405 Method Not Allowed` with an `Allow` header rather than `404`.
 
 ## Write behavior
 
@@ -150,6 +151,7 @@ DELETE  200 OK
 
 Invalid request       400 Validation Error
 Unknown record        404 Not Found
+Unsupported method    405 Method Not Allowed
 Duplicate identifier  409 Conflict
 Database unavailable  503 Service Unavailable
 Unexpected failure    500 Internal Server Error
@@ -157,6 +159,7 @@ Unexpected failure    500 Internal Server Error
 
 ## Documentation
 
+- Deployment and live verification: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 - Product requirements: [`docs/PRD.md`](docs/PRD.md)
 - Technical specification: [`docs/SPEC.md`](docs/SPEC.md)
 - Implementation plan: [`docs/PLAN.md`](docs/PLAN.md)

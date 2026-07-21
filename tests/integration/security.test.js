@@ -55,15 +55,18 @@ describe('CORS allowlist', () => {
     });
   });
 
-  it('advertises read-only methods only', async () => {
+  it('advertises the supported CRUD methods and never PUT', async () => {
     const app = buildTestApp({ corsOrigins: allowlist });
 
     const response = await request(app)
       .options('/api/v1/projects')
       .set('Origin', 'https://app.example.com')
-      .set('Access-Control-Request-Method', 'GET');
+      .set('Access-Control-Request-Method', 'POST');
 
-    expect(response.headers['access-control-allow-methods']).toBe('GET,HEAD,OPTIONS');
+    expect(response.headers['access-control-allow-methods']).toBe(
+      'GET,HEAD,OPTIONS,POST,PATCH,DELETE'
+    );
+    expect(response.headers['access-control-allow-methods']).not.toContain('PUT');
   });
 });
 

@@ -4,6 +4,7 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 
 const { buildErrorBody } = require('../utils/responses');
+const { ALLOWED_METHODS } = require('./allowedMethods');
 
 /**
  * Builds CORS options from an explicit allowlist.
@@ -23,7 +24,7 @@ function buildCorsOptions(env) {
 
       callback(null, false);
     },
-    methods: ['GET', 'HEAD', 'OPTIONS'],
+    methods: [...ALLOWED_METHODS],
     maxAge: 600,
   };
 }

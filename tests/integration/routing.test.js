@@ -43,11 +43,12 @@ describe('routing and envelope conventions', () => {
     expect(response.body.error.code).toBe('ROUTE_NOT_FOUND');
   });
 
-  it('does not expose PUT in the simplified CRUD MVP', async () => {
+  it('rejects PUT with 405 because updates are partial', async () => {
     const response = await request(app).put('/api/v1/projects/context-api').send({ name: 'No' });
 
-    expect(response.status).toBe(404);
-    expect(response.body.error.code).toBe('ROUTE_NOT_FOUND');
+    expect(response.status).toBe(405);
+    expect(response.body.error.code).toBe('METHOD_NOT_ALLOWED');
+    expect(response.headers.allow).toBe('GET, HEAD, OPTIONS, POST, PATCH, DELETE');
   });
 
   it('rejects malformed JSON with a validation error', async () => {
