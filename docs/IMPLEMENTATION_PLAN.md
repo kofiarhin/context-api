@@ -1,7 +1,13 @@
 # Context API — Implementation Plan
 
+> **Historical document.** This plan captures the original read-only MVP scope and is retained as a
+> record of that phase. It no longer describes the API. The approved scope is now a public,
+> unauthenticated CRUD MVP supporting GET, POST, PATCH, and soft-delete DELETE, with PUT returning
+> 405. References to "read-only" endpoints below are historical. See [`../README.md`](../README.md)
+> for the current contract and [`DEPLOYMENT.md`](DEPLOYMENT.md) for supported methods.
+
 **Version:** 0.1  
-**Status:** Ready for implementation  
+**Status:** Superseded by the public CRUD MVP  
 **Source documents:** `docs/PRD.md`, `docs/SPEC.md`  
 **Target branch:** `main`  
 **Last updated:** 2026-07-19

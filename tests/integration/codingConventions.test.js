@@ -139,12 +139,94 @@ describe('GET /api/v1/coding-conventions/:key', () => {
 
   it('returns a project-scoped convention with its project reference', async () => {
     const response = await request(app).get(
-      '/api/v1/coding-conventions/context-api-read-only-endpoints'
+      '/api/v1/coding-conventions/context-api-public-crud-endpoints'
     );
 
     expect(response.status).toBe(200);
     expect(response.body.data.scope).toBe('project');
     expect(response.body.data.projectId).toBe('context-api');
+  });
+
+  it('states the supported CRUD contract in the active API convention', async () => {
+    const response = await request(app).get(
+      '/api/v1/coding-conventions/context-api-public-crud-endpoints'
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.status).toBe('active');
+
+    const rules = response.body.data.rules.join(' ');
+
+    expect(rules).toContain('GET, POST, PATCH, and soft-delete DELETE');
+    expect(rules).toContain('PUT is unsupported and returns 405');
+    expect(rules).toContain('DELETE archives records rather than permanently deleting them');
+    expect(rules).toContain('Stable identifiers are client-provided and immutable');
+    expect(rules).toContain('Unknown fields are rejected');
+    expect(rules).toContain('must not store secrets');
+    expect(rules).toContain('Authentication must be added before');
+  });
+
+  it('retires the superseded read-only convention', async () => {
+    const response = await request(app).get(
+      '/api/v1/coding-conventions/context-api-read-only-endpoints'
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.status).toBe('archived');
+    expect(response.body.data.archivedAt).toBeTruthy();
+    expect(response.body.data.description).toContain('HISTORICAL ONLY');
+    expect(response.body.data.description).toContain('context-api-public-crud-endpoints');
+  });
+});
+
+describe('active coding conventions never describe the API as read-only', () => {
+  /**
+   * The deployed API returned METHOD_NOT_ALLOWED for every write while an active
+   * convention still instructed agents to expose GET routes only. Agents read
+   * these records as guidance, so a stale active rule is a live defect.
+   */
+  it('excludes the superseded read-only convention from the default list', async () => {
+    const response = await request(app).get('/api/v1/coding-conventions?pageSize=100');
+
+    expect(response.status).toBe(200);
+
+    const keys = response.body.data.map((convention) => convention.key);
+
+    expect(keys).not.toContain('context-api-read-only-endpoints');
+    expect(keys).toContain('context-api-public-crud-endpoints');
+  });
+
+  it('has no active convention instructing agents that the API is GET-only', async () => {
+    const response = await request(app).get('/api/v1/coding-conventions?pageSize=100');
+
+    expect(response.status).toBe(200);
+    expect(response.body.meta.total).toBeLessThanOrEqual(100);
+
+    const active = response.body.data.filter((convention) => convention.status === 'active');
+    expect(active.length).toBeGreaterThan(0);
+
+    const offending = active.filter((convention) =>
+      convention.rules.some((rule) => /GET (routes|requests) only|read-only/i.test(rule))
+    );
+
+    expect(offending.map((convention) => convention.key)).toEqual([]);
+  });
+
+  it('keeps exactly one active convention governing Context API methods', async () => {
+    const response = await request(app).get(
+      '/api/v1/coding-conventions?project=context-api&pageSize=100'
+    );
+
+    expect(response.status).toBe(200);
+
+    const governing = response.body.data.filter(
+      (convention) =>
+        convention.status === 'active' &&
+        convention.rules.some((rule) => /GET|POST|PATCH|DELETE|PUT/.test(rule))
+    );
+
+    expect(governing).toHaveLength(1);
+    expect(governing[0].key).toBe('context-api-public-crud-endpoints');
   });
 
   it('does not match on a partial key', async () => {

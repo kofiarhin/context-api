@@ -1,7 +1,7 @@
 {
   "name": "context-api",
   "version": "1.0.0",
-  "description": "Read-oriented API for structured, reusable user, engineering, project, workflow, glossary, and learning context.",
+  "description": "CRUD API for structured, reusable user, engineering, project, workflow, glossary, and learning context.",
   "main": "src/server.js",
   "engines": {
     "node": "24.x"
