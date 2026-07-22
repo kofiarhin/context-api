@@ -1,32 +1,23 @@
 openapi: 3.1.0
 
-# Custom GPT Action schema for the Context API.
-#
-# This file is the maintained source of truth. The copy the assistant actually
-# uses lives in the GPT Builder and is NOT deployed from this repository, so it
-# must be pasted in manually in the same release window as any API change.
-#
+# Maintained source of truth for Zoro's Context API Action.
 # Operation count: 27 (15 context + 12 GitHub), below the 30-operation limit.
+# The schema must still be pasted into GPT Builder manually after repository verification.
 
 info:
   title: Context API
+  version: 1.2.0
   description: >-
-    Structured context storage for user, project, and task records, plus an
-    authenticated GitHub gateway for repository and pull-request operations.
-
-    GitHub operations require a bearer API key and can write directly to default
-    branches such as main and master. File replacement and deletion require the
-    current blob SHA, branch updates require the expected current commit SHA,
-    and merges require the expected head SHA. Paths beneath .github/workflows
-    are blocked by server policy. Force pushes, branch-protection bypasses,
-    repository administration, secret access, and GitHub Actions administration
-    are not available.
-  version: 1.1.0
+    Structured profile, project, and task context plus an authenticated GitHub
+    gateway. GitHub writes may target default branches, but workflow files,
+    force pushes, branch-protection bypasses, secrets, Actions administration,
+    repository administration, and collaborator management are unavailable.
 
 servers:
-  # Replace with the real dyno hostname before pasting into the GPT Builder.
-  - url: https://context-api.herokuapp.com
+  - url: https://context-api-3b9dfadf403e.herokuapp.com
     description: Production
+
+security: []
 
 tags:
   - name: health
@@ -35,16 +26,12 @@ tags:
   - name: tasks
   - name: github
 
-security: []
-
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
-      description: >-
-        The ZORO_GITHUB_API_KEY value. Configure it in the Action authentication
-        panel. Never embed the secret in this schema.
+      description: Configure ZORO_GITHUB_API_KEY in the GPT Action authentication panel.
 
   parameters:
     ProjectId:
@@ -57,6 +44,11 @@ components:
       in: path
       required: true
       schema: { type: string }
+    PullNumber:
+      name: pullNumber
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
     OwnerQuery:
       name: owner
       in: query
@@ -77,43 +69,8 @@ components:
       in: query
       required: false
       schema: { type: integer, minimum: 1, maximum: 100, default: 30 }
-    PullNumber:
-      name: pullNumber
-      in: path
-      required: true
-      schema: { type: integer, minimum: 1 }
 
   schemas:
-    Meta:
-      type: object
-      properties:
-        version: { type: string }
-        count: { type: integer }
-        page: { type: integer }
-        perPage: { type: integer }
-        hasNextPage: { type: boolean }
-        total: { type: integer }
-        pageSize: { type: integer }
-        totalPages: { type: integer }
-        correlationId: { type: string }
-
-    ErrorResponse:
-      type: object
-      properties:
-        error:
-          type: object
-          properties:
-            code: { type: string }
-            message: { type: string }
-            details:
-              type: array
-              items:
-                type: object
-                properties:
-                  field: { type: string }
-                  message: { type: string }
-        meta: { $ref: '#/components/schemas/Meta' }
-
     Source:
       type: object
       additionalProperties: false
@@ -173,118 +130,38 @@ components:
         tags: { type: array, items: { type: string } }
         source: { $ref: '#/components/schemas/Source' }
 
-    GithubRepository:
+    GithubFileBody:
       type: object
-      properties:
-        owner: { type: string }
-        name: { type: string }
-        fullName: { type: string }
-        private: { type: boolean }
-        archived: { type: boolean }
-        defaultBranch: { type: string }
-        htmlUrl: { type: string }
-        permissions:
-          type: object
-          properties:
-            contents: { type: string }
-            pullRequests: { type: string }
-
-    GithubContent:
-      type: object
-      properties:
-        type: { type: string, enum: [file, directory, symlink, submodule] }
-        owner: { type: string }
-        repo: { type: string }
-        path: { type: string }
-        ref: { type: string }
-        sha: { type: string }
-        size: { type: integer }
-        encoding: { type: string }
-        content: { type: [string, 'null'] }
-        htmlUrl: { type: string }
-        entries:
-          type: array
-          items:
-            type: object
-            properties:
-              type: { type: string }
-              name: { type: string }
-              path: { type: string }
-              sha: { type: string }
-              size: { type: integer }
-              htmlUrl: { type: string }
-
-    GithubBranchList:
-      type: object
-      properties:
-        owner: { type: string }
-        repo: { type: string }
-        defaultBranch: { type: string }
-        branches:
-          type: array
-          items:
-            type: object
-            properties:
-              name: { type: string }
-              sha: { type: string }
-              protected: { type: boolean }
-
-    GithubBranchRef:
-      type: object
+      additionalProperties: false
+      required: [owner, repo, branch, path, message]
       properties:
         owner: { type: string }
         repo: { type: string }
         branch: { type: string }
-        sha: { type: string }
-        baseRef: { type: string }
-        htmlUrl: { type: string }
+        path: { type: string, maxLength: 1024 }
+        sha: { type: string, pattern: '^[0-9a-fA-F]{40}$' }
+        content: { type: string, maxLength: 250000 }
+        message: { type: string, minLength: 1, maxLength: 250 }
 
-    GithubFileWrite:
+    ErrorResponse:
       type: object
       properties:
-        owner: { type: string }
-        repo: { type: string }
-        branch: { type: string }
-        path: { type: string }
-        contentSha: { type: string }
-        commitSha: { type: string }
-        commitUrl: { type: string }
-        deleted: { type: boolean }
-
-    GithubPullRequest:
-      type: object
-      properties:
-        owner: { type: string }
-        repo: { type: string }
-        number: { type: integer }
-        title: { type: string }
-        body: { type: [string, 'null'] }
-        state: { type: string }
-        draft: { type: boolean }
-        merged: { type: boolean }
-        mergeable: { type: [boolean, 'null'] }
-        mergeableState: { type: string }
-        head:
+        error:
           type: object
           properties:
-            ref: { type: string }
-            sha: { type: string }
-        base:
+            code: { type: string }
+            message: { type: string }
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field: { type: string }
+                  message: { type: string }
+        correlationId: { type: string }
+        meta:
           type: object
-          properties:
-            ref: { type: string }
-            sha: { type: string }
-        htmlUrl: { type: string }
-
-    GithubMergeResult:
-      type: object
-      properties:
-        owner: { type: string }
-        repo: { type: string }
-        number: { type: integer }
-        merged: { type: boolean }
-        sha: { type: string }
-        message: { type: string }
+          additionalProperties: true
 
   responses:
     BadRequest:
@@ -298,7 +175,7 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
     Forbidden:
-      description: Denied by GitHub or by server policy
+      description: Denied by server or repository policy
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -308,22 +185,17 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
     Conflict:
-      description: Stale SHA, existing resource, or state conflict
+      description: Existing resource, stale SHA, or invalid state
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
-    UnsupportedContent:
-      description: Binary or unsupported content
+    Unsupported:
+      description: Unsupported binary or large content
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
-    UpstreamRejected:
-      description: GitHub rejected the request
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/ErrorResponse' }
-    UpstreamUnavailable:
-      description: GitHub unavailable
+    Upstream:
+      description: GitHub rejected or could not complete the request
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -335,19 +207,7 @@ paths:
       operationId: getHealth
       summary: Report service health
       responses:
-        '200':
-          description: Health report
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: object
-                    properties:
-                      status: { type: string }
-                      database: { type: string }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '200': { description: Healthy }
 
   /api/v1/profile:
     get:
@@ -355,15 +215,7 @@ paths:
       operationId: getProfile
       summary: Read the profile
       responses:
-        '200':
-          description: The profile
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/Profile' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '200': { description: Profile }
         '404': { $ref: '#/components/responses/NotFound' }
     post:
       tags: [profile]
@@ -375,15 +227,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/Profile' }
       responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/Profile' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '201': { description: Created }
         '400': { $ref: '#/components/responses/BadRequest' }
         '409': { $ref: '#/components/responses/Conflict' }
     patch:
@@ -396,15 +240,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/Profile' }
       responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/Profile' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '200': { description: Updated }
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
     delete:
@@ -412,15 +248,7 @@ paths:
       operationId: deleteProfile
       summary: Archive the profile
       responses:
-        '200':
-          description: Archived
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/Profile' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '200': { description: Archived }
         '404': { $ref: '#/components/responses/NotFound' }
 
   /api/v1/projects:
@@ -437,17 +265,7 @@ paths:
           schema: { type: string }
         - { $ref: '#/components/parameters/Page' }
       responses:
-        '200':
-          description: Projects
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items: { $ref: '#/components/schemas/Project' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '200': { description: Projects }
         '400': { $ref: '#/components/responses/BadRequest' }
     post:
       tags: [projects]
@@ -459,75 +277,39 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/Project' }
       responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/Project' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '201': { description: Created }
         '400': { $ref: '#/components/responses/BadRequest' }
         '409': { $ref: '#/components/responses/Conflict' }
 
   /api/v1/projects/{projectId}:
+    parameters:
+      - { $ref: '#/components/parameters/ProjectId' }
     get:
       tags: [projects]
       operationId: getProject
       summary: Read a project
-      parameters:
-        - { $ref: '#/components/parameters/ProjectId' }
       responses:
-        '200':
-          description: The project
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/Project' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '200': { description: Project }
         '404': { $ref: '#/components/responses/NotFound' }
     patch:
       tags: [projects]
       operationId: updateProject
       summary: Partially update a project
-      parameters:
-        - { $ref: '#/components/parameters/ProjectId' }
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/Project' }
       responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/Project' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '200': { description: Updated }
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
     delete:
       tags: [projects]
       operationId: deleteProject
       summary: Archive a project
-      parameters:
-        - { $ref: '#/components/parameters/ProjectId' }
       responses:
-        '200':
-          description: Archived
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/Project' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '200': { description: Archived }
         '404': { $ref: '#/components/responses/NotFound' }
 
   /api/v1/tasks:
@@ -544,17 +326,7 @@ paths:
           schema: { type: string }
         - { $ref: '#/components/parameters/Page' }
       responses:
-        '200':
-          description: Tasks
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items: { $ref: '#/components/schemas/Task' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '200': { description: Tasks }
         '400': { $ref: '#/components/responses/BadRequest' }
     post:
       tags: [tasks]
@@ -566,75 +338,39 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/Task' }
       responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/Task' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '201': { description: Created }
         '400': { $ref: '#/components/responses/BadRequest' }
         '409': { $ref: '#/components/responses/Conflict' }
 
   /api/v1/tasks/{taskId}:
+    parameters:
+      - { $ref: '#/components/parameters/TaskId' }
     get:
       tags: [tasks]
       operationId: getTask
       summary: Read a task
-      parameters:
-        - { $ref: '#/components/parameters/TaskId' }
       responses:
-        '200':
-          description: The task
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/Task' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '200': { description: Task }
         '404': { $ref: '#/components/responses/NotFound' }
     patch:
       tags: [tasks]
       operationId: updateTask
       summary: Partially update a task
-      parameters:
-        - { $ref: '#/components/parameters/TaskId' }
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/Task' }
       responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/Task' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '200': { description: Updated }
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
     delete:
       tags: [tasks]
       operationId: deleteTask
       summary: Archive a task
-      parameters:
-        - { $ref: '#/components/parameters/TaskId' }
       responses:
-        '200':
-          description: Archived
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/Task' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '200': { description: Archived }
         '404': { $ref: '#/components/responses/NotFound' }
 
   /api/v1/github/repositories:
@@ -647,29 +383,15 @@ paths:
         - { $ref: '#/components/parameters/Page' }
         - { $ref: '#/components/parameters/PerPage' }
       responses:
-        '200':
-          description: Repositories
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items: { $ref: '#/components/schemas/GithubRepository' }
-                  meta: { $ref: '#/components/schemas/Meta' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '200': { description: Repositories }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+        '502': { $ref: '#/components/responses/Upstream' }
 
   /api/v1/github/contents:
     get:
       tags: [github]
       operationId: getGithubContent
       summary: Read a UTF-8 file or list a directory
-      description: >-
-        Omit path to read the repository root. Omit ref to use the repository
-        default branch. Binary files are not supported.
       security: [{ bearerAuth: [] }]
       parameters:
         - { $ref: '#/components/parameters/OwnerQuery' }
@@ -683,20 +405,13 @@ paths:
           required: false
           schema: { type: string }
       responses:
-        '200':
-          description: File or directory
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/GithubContent' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '200': { description: File or directory }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '415': { $ref: '#/components/responses/UnsupportedContent' }
-        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+        '415': { $ref: '#/components/responses/Unsupported' }
+        '502': { $ref: '#/components/responses/Upstream' }
 
   /api/v1/github/branches:
     get:
@@ -710,19 +425,11 @@ paths:
         - { $ref: '#/components/parameters/Page' }
         - { $ref: '#/components/parameters/PerPage' }
       responses:
-        '200':
-          description: Branches
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/GithubBranchList' }
-                  meta: { $ref: '#/components/schemas/Meta' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '200': { description: Branches }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+        '502': { $ref: '#/components/responses/Upstream' }
     post:
       tags: [github]
       operationId: createGithubBranch
@@ -740,35 +447,21 @@ paths:
                 owner: { type: string }
                 repo: { type: string }
                 branch: { type: string }
-                baseRef:
-                  type: string
-                  description: Defaults to the repository default branch.
+                baseRef: { type: string }
       responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/GithubBranchRef' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '201': { description: Created }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/UpstreamRejected' }
-        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+        '422': { $ref: '#/components/responses/Upstream' }
 
   /api/v1/github/branches/{branch}:
     patch:
       tags: [github]
       operationId: updateGithubBranch
-      summary: Fast-forward a branch
-      description: >-
-        Requires the expected current commit SHA. The update is always
-        non-force; a force push cannot be requested. Default branches may be
-        updated when GitHub allows the fast-forward.
+      summary: Fast-forward a branch without force
       security: [{ bearerAuth: [] }]
       parameters:
         - name: branch
@@ -786,156 +479,92 @@ paths:
               properties:
                 owner: { type: string }
                 repo: { type: string }
-                expectedCurrentSha: { type: string }
-                newSha: { type: string }
+                expectedCurrentSha: { type: string, pattern: '^[0-9a-fA-F]{40}$' }
+                newSha: { type: string, pattern: '^[0-9a-fA-F]{40}$' }
       responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/GithubBranchRef' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '200': { description: Updated }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/UpstreamRejected' }
-        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+        '422': { $ref: '#/components/responses/Upstream' }
 
   /api/v1/github/files:
     post:
       tags: [github]
       operationId: createGithubFile
       summary: Create a UTF-8 file
-      description: >-
-        Writes directly to the named branch, including default branches. Fails
-        with 409 if the path already exists. Paths beneath .github/workflows are
-        blocked.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required: [owner, repo, branch, path, content, message]
-              properties:
-                owner: { type: string }
-                repo: { type: string }
-                branch: { type: string }
-                path: { type: string }
-                content: { type: string, maxLength: 250000 }
-                message: { type: string, maxLength: 250 }
+              allOf:
+                - { $ref: '#/components/schemas/GithubFileBody' }
+                - type: object
+                  required: [content]
       responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/GithubFileWrite' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '201': { description: Created }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
-        '415': { $ref: '#/components/responses/UnsupportedContent' }
-        '422': { $ref: '#/components/responses/UpstreamRejected' }
-        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+        '415': { $ref: '#/components/responses/Unsupported' }
+        '422': { $ref: '#/components/responses/Upstream' }
     patch:
       tags: [github]
       operationId: updateGithubFile
-      summary: Replace a UTF-8 file
-      description: >-
-        Requires the current blob SHA; a stale SHA returns 409. Content fully
-        replaces the file, so read it first and submit complete content.
+      summary: Replace a UTF-8 file using its current blob SHA
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required: [owner, repo, branch, path, sha, content, message]
-              properties:
-                owner: { type: string }
-                repo: { type: string }
-                branch: { type: string }
-                path: { type: string }
-                sha: { type: string }
-                content: { type: string, maxLength: 250000 }
-                message: { type: string, maxLength: 250 }
+              allOf:
+                - { $ref: '#/components/schemas/GithubFileBody' }
+                - type: object
+                  required: [sha, content]
       responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/GithubFileWrite' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '200': { description: Updated }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
-        '415': { $ref: '#/components/responses/UnsupportedContent' }
-        '422': { $ref: '#/components/responses/UpstreamRejected' }
-        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+        '415': { $ref: '#/components/responses/Unsupported' }
+        '422': { $ref: '#/components/responses/Upstream' }
     delete:
       tags: [github]
       operationId: deleteGithubFile
-      summary: Delete a file
-      description: Requires the current blob SHA; a stale SHA returns 409.
+      summary: Delete a file using its current blob SHA
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required: [owner, repo, branch, path, sha, message]
-              properties:
-                owner: { type: string }
-                repo: { type: string }
-                branch: { type: string }
-                path: { type: string }
-                sha: { type: string }
-                message: { type: string, maxLength: 250 }
+              allOf:
+                - { $ref: '#/components/schemas/GithubFileBody' }
+                - type: object
+                  required: [sha]
       responses:
-        '200':
-          description: Deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/GithubFileWrite' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '200': { description: Deleted }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/UpstreamRejected' }
-        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+        '422': { $ref: '#/components/responses/Upstream' }
 
   /api/v1/github/pull-requests:
     post:
       tags: [github]
       operationId: createGithubPullRequest
       summary: Create a pull request
-      description: Draft defaults to true.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -949,63 +578,42 @@ paths:
                 owner: { type: string }
                 repo: { type: string }
                 title: { type: string, maxLength: 250 }
-                body: { type: string }
+                body: { type: string, maxLength: 65536 }
                 head: { type: string }
                 base: { type: string }
-                draft: { type: boolean, default: true }
-                maintainerCanModify: { type: boolean, default: true }
+                draft: { type: boolean }
+                maintainerCanModify: { type: boolean }
       responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/GithubPullRequest' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '201': { description: Created }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/UpstreamRejected' }
-        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+        '422': { $ref: '#/components/responses/Upstream' }
 
   /api/v1/github/pull-requests/{pullNumber}:
+    parameters:
+      - { $ref: '#/components/parameters/PullNumber' }
     get:
       tags: [github]
       operationId: getGithubPullRequest
       summary: Read a pull request
-      description: >-
-        mergeable may be null while GitHub is still computing mergeability. Do
-        not treat null as mergeable.
       security: [{ bearerAuth: [] }]
       parameters:
-        - { $ref: '#/components/parameters/PullNumber' }
         - { $ref: '#/components/parameters/OwnerQuery' }
         - { $ref: '#/components/parameters/RepoQuery' }
       responses:
-        '200':
-          description: The pull request
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/GithubPullRequest' }
-                  meta: { $ref: '#/components/schemas/Meta' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '200': { description: Pull request }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+        '502': { $ref: '#/components/responses/Upstream' }
     patch:
       tags: [github]
       operationId: updateGithubPullRequest
-      summary: Update, close, or reopen a pull request
-      description: At least one mutable property is required.
+      summary: Update or close a pull request
       security: [{ bearerAuth: [] }]
-      parameters:
-        - { $ref: '#/components/parameters/PullNumber' }
       requestBody:
         required: true
         content:
@@ -1018,37 +626,23 @@ paths:
                 owner: { type: string }
                 repo: { type: string }
                 title: { type: string, maxLength: 250 }
-                body: { type: string }
+                body: { type: string, maxLength: 65536 }
                 state: { type: string, enum: [open, closed] }
                 base: { type: string }
                 maintainerCanModify: { type: boolean }
       responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/GithubPullRequest' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '200': { description: Updated }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/UpstreamRejected' }
-        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+        '422': { $ref: '#/components/responses/Upstream' }
 
   /api/v1/github/pull-requests/{pullNumber}/merge:
     post:
       tags: [github]
       operationId: mergeGithubPullRequest
-      summary: Merge a pull request
-      description: >-
-        Requires the expected current head SHA; a stale SHA returns 409. Branch
-        protection, required reviews, and required status checks remain
-        authoritative and are never bypassed.
+      summary: Merge a pull request using its expected head SHA
       security: [{ bearerAuth: [] }]
       parameters:
         - { $ref: '#/components/parameters/PullNumber' }
@@ -1063,24 +657,15 @@ paths:
               properties:
                 owner: { type: string }
                 repo: { type: string }
-                expectedHeadSha: { type: string }
+                expectedHeadSha: { type: string, pattern: '^[0-9a-fA-F]{40}$' }
                 mergeMethod: { type: string, enum: [merge, squash, rebase] }
                 commitTitle: { type: string, maxLength: 250 }
-                commitMessage: { type: string }
+                commitMessage: { type: string, maxLength: 65536 }
       responses:
-        '200':
-          description: Merge attempted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/GithubMergeResult' }
-                  meta: { $ref: '#/components/schemas/Meta' }
+        '200': { description: Merge result }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/UpstreamRejected' }
-        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+        '422': { $ref: '#/components/responses/Upstream' }
