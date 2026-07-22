@@ -98,11 +98,12 @@ describe('rate limiting', () => {
     expect(health.status).toBe(200);
   });
 
-  it('sets standard rate limit headers', async () => {
+  it('sets the configured draft-7 RateLimit header without legacy headers', async () => {
     const app = buildTestApp({ rateLimitMax: 5, rateLimitWindowMs: 60000 });
 
     const response = await request(app).get('/api/v1/projects');
 
-    expect(response.headers).toHaveProperty('ratelimit-limit');
+    expect(response.headers).toHaveProperty('ratelimit');
+    expect(response.headers).not.toHaveProperty('x-ratelimit-limit');
   });
 });
