@@ -39,7 +39,7 @@ describe('requireGithubRepositoryAccess', () => {
 
     const error = next.mock.calls[0][0];
     expect(error.code).toBe('GITHUB_FORBIDDEN');
-    expect(error.status).toBe(403);
+    expect(error.statusCode).toBe(403);
   });
 
   it('defers malformed requests to the normal request validator', () => {
