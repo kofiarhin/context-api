@@ -24,9 +24,9 @@ The GitHub gateway uses optimistic concurrency for destructive writes, rejects f
 - Direct default-branch writes and the unauthenticated context surface are prominently disclosed.
 - Verification scripts and test/lint/format commands are defined in `package.json`.
 
-### Corrected drift
+### Identified drift
 
-The README previously stated Node.js 20.19 or newer while `package.json` requires Node.js 24.x. The package manifest is the executable authority, so the README has been aligned to Node.js 24.x.
+The README states Node.js 20.19 or newer while `package.json` requires Node.js 24.x. The package manifest is the executable authority. The README should be aligned in a focused follow-up that preserves its existing detailed API documentation.
 
 ### Remaining risks and gaps
 
@@ -47,4 +47,4 @@ The README previously stated Node.js 20.19 or newer while `package.json` require
 
 ## Audit conclusion
 
-Context API is already one of the best-documented repositories in the portfolio. The main work was correcting runtime-version drift and recording the remaining operational and security risks. The existing PRD and specifications should remain authoritative; duplicate replacement documents are unnecessary.
+Context API is already one of the best-documented repositories in the portfolio. The main audit result is a concrete runtime-version mismatch plus remaining operational and security risks. The existing PRD and specifications should remain authoritative; duplicate replacement documents are unnecessary.
