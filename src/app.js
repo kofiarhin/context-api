@@ -14,6 +14,7 @@ const queryLimits = require('./middleware/queryLimits');
 const allowedMethods = require('./middleware/allowedMethods');
 const requireDatabase = require('./middleware/requireDatabase');
 const requireGithubActionAuth = require('./middleware/requireGithubActionAuth');
+const requireGithubRepositoryAccess = require('./middleware/requireGithubRepositoryAccess');
 const notFound = require('./middleware/notFound');
 const errorHandler = require('./middleware/errorHandler');
 const { createCors, createRateLimiter } = require('./middleware/security');
@@ -53,11 +54,12 @@ function createApp(options = {}) {
 
   // The GitHub gateway is mounted first, with its own parser and its own
   // authentication. It deliberately skips `requireDatabase`: these routes talk
-  // to GitHub, so a MongoDB outage must not take repository access down with it.
+  // to GitHub, so request handling does not depend on the database middleware.
   app.use(
     '/api/v1/github',
     express.json({ limit: GITHUB_JSON_BODY_LIMIT }),
     requireGithubActionAuth(env),
+    requireGithubRepositoryAccess(env),
     githubRouter
   );
 
