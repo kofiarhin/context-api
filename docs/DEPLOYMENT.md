@@ -47,6 +47,45 @@ Set these as Heroku config vars. Never commit populated values.
 | `RATE_LIMIT_WINDOW_MS` | no       | Defaults to `900000`                             |
 | `RATE_LIMIT_MAX`       | no       | Defaults to `100`                                |
 
+### GitHub gateway configuration
+
+All five are **required in production**. Startup fails if any is missing or malformed.
+
+| Variable                    | Required | Notes                                              |
+| --------------------------- | -------- | -------------------------------------------------- |
+| `GITHUB_APP_ID`             | yes      | Positive integer from the GitHub App settings page |
+| `GITHUB_INSTALLATION_ID`    | yes      | Positive integer from the installation URL         |
+| `GITHUB_PRIVATE_KEY_BASE64` | yes      | Base64-encoded PEM; decoded in memory only         |
+| `GITHUB_REPOSITORY_ACCESS`  | yes      | Only `all` is supported                            |
+| `ZORO_GITHUB_API_KEY`       | yes      | Bearer secret, minimum 32 characters               |
+
+Encode the private key without line wrapping, and set it without it entering shell history:
+
+```bash
+base64 -w0 your-app.private-key.pem > key.b64
+heroku config:set GITHUB_PRIVATE_KEY_BASE64="$(cat key.b64)" --app <app-name>
+shred -u key.b64 your-app.private-key.pem   # or delete securely
+```
+
+Generate the bearer secret with `openssl rand -hex 32`. It must match the value configured in the
+Custom GPT Action authentication panel.
+
+Confirm the variables exist **without printing their values**:
+
+```bash
+heroku config --app <app-name> | cut -d: -f1     # names only
+heroku config:get GITHUB_REPOSITORY_ACCESS --app <app-name>   # safe: expect "all"
+```
+
+Never run `heroku config:get GITHUB_PRIVATE_KEY_BASE64` or `heroku config:get ZORO_GITHUB_API_KEY`.
+
+The GitHub App installation needs exactly these repository permissions: metadata read, contents read
+and write, pull requests read and write. Nothing broader.
+
+> **Dependency note:** the gateway requires the `octokit` package. It is declared in `package.json`,
+> but `package-lock.json` must be regenerated with `npm install octokit` in an environment that can
+> reach the npm registry before deploying, or `npm ci` will fail on the lockfile mismatch.
+
 Startup fails fast and lists every problem if required variables are missing or malformed.
 
 ## Deploying
@@ -107,12 +146,89 @@ predates CRUD support. Confirm with `heroku releases` and redeploy rather than c
 The same sequence runs locally against the production entry point via
 `tests/integration/productionRouteRegistration.test.js`.
 
+## Verifying the deployed GitHub gateway
+
+Load the bearer key from a secure source. Never paste it inline and never echo it.
+
+```bash
+BASE=https://<app-name>.herokuapp.com
+read -rs ZORO_GITHUB_API_KEY && export ZORO_GITHUB_API_KEY
+AUTH="Authorization: Bearer $ZORO_GITHUB_API_KEY"
+```
+
+Run the read and policy checks **before** attempting any write:
+
+```bash
+# 1. Unauthenticated access is refused
+curl -s -o /dev/null -w '%{http_code}\n' "$BASE/api/v1/github/repositories"          # expect 401
+
+# 2. Authenticated repository list
+curl -s -o /dev/null -w '%{http_code}\n' -H "$AUTH" "$BASE/api/v1/github/repositories"  # expect 200
+
+# 3. Repository root read
+curl -s -o /dev/null -w '%{http_code}\n' -H "$AUTH" \
+  "$BASE/api/v1/github/contents?owner=<owner>&repo=<repo>"                            # expect 200
+
+# 4. Branch list
+curl -s -o /dev/null -w '%{http_code}\n' -H "$AUTH" \
+  "$BASE/api/v1/github/branches?owner=<owner>&repo=<repo>"                            # expect 200
+
+# 5. Workflow paths stay blocked
+curl -s -o /dev/null -w '%{http_code}\n' -X POST -H "$AUTH" -H 'Content-Type: application/json' \
+  -d '{"owner":"<owner>","repo":"<repo>","branch":"main","path":".github/workflows/x.yml","content":"x","message":"test"}' \
+  "$BASE/api/v1/github/files"                                                         # expect 403
+
+# 6. Unknown repository fails safely
+curl -s -o /dev/null -w '%{http_code}\n' -H "$AUTH" \
+  "$BASE/api/v1/github/contents?owner=<owner>&repo=definitely-not-a-repo"             # expect 404
+```
+
+### Write smoke test
+
+Use a **disposable path in a non-critical repository**. Do not use production application files.
+
+1. Create a branch `test/gateway-smoke` from the default branch.
+2. Create `docs/gateway-smoke-test.md` on that branch.
+3. Read it back and record the blob SHA.
+4. Replace it using that SHA.
+5. Open a draft pull request and record its head SHA.
+6. Close the pull request without merging.
+7. Separately, create a disposable file directly on the default branch.
+8. Read it, then delete it using its current SHA.
+9. Confirm both commits appear in the default branch history.
+10. Delete the temporary branch through the GitHub UI — branch deletion is not exposed by this API.
+
+Confirm no secret value appeared in any command output or in `heroku logs`.
+
+## Rolling back the GitHub gateway
+
+```bash
+git revert <gateway-commit>          # never force-push as part of recovery
+git push heroku main
+heroku releases --app <app-name>     # confirm the rollback release is current
+```
+
+Then remove the GitHub operations from the Custom GPT Action schema and save the GPT.
+
+If credential exposure is suspected, in this order:
+
+1. rotate `ZORO_GITHUB_API_KEY` and update the Action authentication panel;
+2. generate a new GitHub App private key and update `GITHUB_PRIVATE_KEY_BASE64`;
+3. revoke the previous private key in the GitHub App settings;
+4. suspend or uninstall the GitHub App if immediate repository isolation is required.
+
+Recover affected repositories through normal Git history — revert commits and restore files from
+prior commits. Do not force-push. Record affected repositories, paths, commits, and correlation IDs.
+
 ## Keeping the OpenAPI Action schema in sync
 
-> **Warning:** the OpenAPI schema used by the Custom GPT Action is configured in the GPT itself and
-> is **not** stored in this repository. Nothing in CI can detect drift between it and the deployed
+> **Warning:** the schema the Custom GPT Action actually uses is configured in the GPT itself and is
+> **not** deployed from this repository. Nothing in CI can detect drift between it and the deployed
 > API. Whenever a route, method, request body, or field changes here, update the Action schema in the
 > same change window, or the assistant will call endpoints that do not exist or omit required fields.
+
+The maintained copy lives at [`openapi/zoro-action.yaml`](openapi/zoro-action.yaml). Edit it here,
+then paste it into the GPT Builder. It currently declares **27 operations** (15 context + 12 GitHub).
 
 The Action schema must:
 
@@ -122,7 +238,22 @@ The Action schema must:
   `operationId` values;
 - describe request bodies with explicit object properties, not free-form objects;
 - use `PATCH` for updates — never `PUT`;
-- stay below the Custom GPT Action operation limit (30).
+- stay below the Custom GPT Action operation limit (30);
+- declare a bearer security scheme and apply it to every GitHub operation;
+- never contain the bearer secret itself — set that in the Action authentication panel.
+
+After updating the GPT, start a **new conversation**: an existing one caches stale Action metadata.
+
+Validate the file's structure, operation count, and `$ref` integrity before pasting:
+
+```bash
+node -e "
+const y=require('js-yaml'),f=require('fs');
+const d=y.load(f.readFileSync('docs/openapi/zoro-action.yaml','utf8'));
+const ops=Object.values(d.paths).flatMap(p=>Object.keys(p).filter(m=>m!=='parameters').map(m=>p[m].operationId));
+console.log('operations:',ops.length,'unique:',new Set(ops).size);
+"
+```
 
 ### Task field contract
 

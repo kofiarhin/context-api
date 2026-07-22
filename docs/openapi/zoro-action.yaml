@@ -1,0 +1,1086 @@
+openapi: 3.1.0
+
+# Custom GPT Action schema for the Context API.
+#
+# This file is the maintained source of truth. The copy the assistant actually
+# uses lives in the GPT Builder and is NOT deployed from this repository, so it
+# must be pasted in manually in the same release window as any API change.
+#
+# Operation count: 27 (15 context + 12 GitHub), below the 30-operation limit.
+
+info:
+  title: Context API
+  description: >-
+    Structured context storage for user, project, and task records, plus an
+    authenticated GitHub gateway for repository and pull-request operations.
+
+    GitHub operations require a bearer API key and can write directly to default
+    branches such as main and master. File replacement and deletion require the
+    current blob SHA, branch updates require the expected current commit SHA,
+    and merges require the expected head SHA. Paths beneath .github/workflows
+    are blocked by server policy. Force pushes, branch-protection bypasses,
+    repository administration, secret access, and GitHub Actions administration
+    are not available.
+  version: 1.1.0
+
+servers:
+  # Replace with the real dyno hostname before pasting into the GPT Builder.
+  - url: https://context-api.herokuapp.com
+    description: Production
+
+tags:
+  - name: health
+  - name: profile
+  - name: projects
+  - name: tasks
+  - name: github
+
+security: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: >-
+        The ZORO_GITHUB_API_KEY value. Configure it in the Action authentication
+        panel. Never embed the secret in this schema.
+
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema: { type: string }
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema: { type: string }
+    OwnerQuery:
+      name: owner
+      in: query
+      required: true
+      schema: { type: string }
+    RepoQuery:
+      name: repo
+      in: query
+      required: true
+      schema: { type: string }
+    Page:
+      name: page
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, default: 1 }
+    PerPage:
+      name: perPage
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 100, default: 30 }
+    PullNumber:
+      name: pullNumber
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+
+  schemas:
+    Meta:
+      type: object
+      properties:
+        version: { type: string }
+        count: { type: integer }
+        page: { type: integer }
+        perPage: { type: integer }
+        hasNextPage: { type: boolean }
+        total: { type: integer }
+        pageSize: { type: integer }
+        totalPages: { type: integer }
+        correlationId: { type: string }
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field: { type: string }
+                  message: { type: string }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    Source:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type: { type: string }
+        reference: { type: string }
+
+    Profile:
+      type: object
+      additionalProperties: false
+      properties:
+        key: { type: string }
+        displayName: { type: string }
+        description: { type: string }
+        professionalRoles: { type: array, items: { type: string } }
+        preferredStack: { type: array, items: { type: string } }
+        responsePreferences: { type: array, items: { type: string } }
+        testingPreferences: { type: array, items: { type: string } }
+        architecturePreferences: { type: array, items: { type: string } }
+        communicationPreferences: { type: array, items: { type: string } }
+        tags: { type: array, items: { type: string } }
+        source: { $ref: '#/components/schemas/Source' }
+        status: { type: string }
+        version: { type: integer }
+
+    Project:
+      type: object
+      additionalProperties: false
+      properties:
+        projectId: { type: string }
+        name: { type: string }
+        description: { type: string }
+        status: { type: string }
+        priority: { type: string }
+        technologyStack: { type: array, items: { type: string } }
+        tags: { type: array, items: { type: string } }
+        source: { $ref: '#/components/schemas/Source' }
+        version: { type: integer }
+
+    Task:
+      type: object
+      additionalProperties: false
+      properties:
+        taskId: { type: string }
+        title: { type: string }
+        projectId: { type: string }
+        description: { type: string }
+        status:
+          type: string
+          enum: [backlog, ready, in-progress, blocked, done, archived]
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        acceptanceCriteria: { type: array, items: { type: string } }
+        dependencies: { type: array, items: { type: string } }
+        tags: { type: array, items: { type: string } }
+        source: { $ref: '#/components/schemas/Source' }
+
+    GithubRepository:
+      type: object
+      properties:
+        owner: { type: string }
+        name: { type: string }
+        fullName: { type: string }
+        private: { type: boolean }
+        archived: { type: boolean }
+        defaultBranch: { type: string }
+        htmlUrl: { type: string }
+        permissions:
+          type: object
+          properties:
+            contents: { type: string }
+            pullRequests: { type: string }
+
+    GithubContent:
+      type: object
+      properties:
+        type: { type: string, enum: [file, directory, symlink, submodule] }
+        owner: { type: string }
+        repo: { type: string }
+        path: { type: string }
+        ref: { type: string }
+        sha: { type: string }
+        size: { type: integer }
+        encoding: { type: string }
+        content: { type: [string, 'null'] }
+        htmlUrl: { type: string }
+        entries:
+          type: array
+          items:
+            type: object
+            properties:
+              type: { type: string }
+              name: { type: string }
+              path: { type: string }
+              sha: { type: string }
+              size: { type: integer }
+              htmlUrl: { type: string }
+
+    GithubBranchList:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        defaultBranch: { type: string }
+        branches:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              sha: { type: string }
+              protected: { type: boolean }
+
+    GithubBranchRef:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        branch: { type: string }
+        sha: { type: string }
+        baseRef: { type: string }
+        htmlUrl: { type: string }
+
+    GithubFileWrite:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        branch: { type: string }
+        path: { type: string }
+        contentSha: { type: string }
+        commitSha: { type: string }
+        commitUrl: { type: string }
+        deleted: { type: boolean }
+
+    GithubPullRequest:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        number: { type: integer }
+        title: { type: string }
+        body: { type: [string, 'null'] }
+        state: { type: string }
+        draft: { type: boolean }
+        merged: { type: boolean }
+        mergeable: { type: [boolean, 'null'] }
+        mergeableState: { type: string }
+        head:
+          type: object
+          properties:
+            ref: { type: string }
+            sha: { type: string }
+        base:
+          type: object
+          properties:
+            ref: { type: string }
+            sha: { type: string }
+        htmlUrl: { type: string }
+
+    GithubMergeResult:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        number: { type: integer }
+        merged: { type: boolean }
+        sha: { type: string }
+        message: { type: string }
+
+  responses:
+    BadRequest:
+      description: Validation failed
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Missing or invalid bearer token
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Denied by GitHub or by server policy
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Stale SHA, existing resource, or state conflict
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    UnsupportedContent:
+      description: Binary or unsupported content
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    UpstreamRejected:
+      description: GitHub rejected the request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    UpstreamUnavailable:
+      description: GitHub unavailable
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+paths:
+  /health:
+    get:
+      tags: [health]
+      operationId: getHealth
+      summary: Report service health
+      responses:
+        '200':
+          description: Health report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      status: { type: string }
+                      database: { type: string }
+                  meta: { $ref: '#/components/schemas/Meta' }
+
+  /api/v1/profile:
+    get:
+      tags: [profile]
+      operationId: getProfile
+      summary: Read the profile
+      responses:
+        '200':
+          description: The profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Profile' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [profile]
+      operationId: createProfile
+      summary: Create the profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Profile' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Profile' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    patch:
+      tags: [profile]
+      operationId: updateProfile
+      summary: Partially update the profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Profile' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Profile' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [profile]
+      operationId: deleteProfile
+      summary: Archive the profile
+      responses:
+        '200':
+          description: Archived
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Profile' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/projects:
+    get:
+      tags: [projects]
+      operationId: listProjects
+      summary: List projects
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: technology
+          in: query
+          schema: { type: string }
+        - { $ref: '#/components/parameters/Page' }
+      responses:
+        '200':
+          description: Projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Project' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+    post:
+      tags: [projects]
+      operationId: createProject
+      summary: Create a project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Project' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Project' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/projects/{projectId}:
+    get:
+      tags: [projects]
+      operationId: getProject
+      summary: Read a project
+      parameters:
+        - { $ref: '#/components/parameters/ProjectId' }
+      responses:
+        '200':
+          description: The project
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Project' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [projects]
+      operationId: updateProject
+      summary: Partially update a project
+      parameters:
+        - { $ref: '#/components/parameters/ProjectId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Project' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Project' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [projects]
+      operationId: deleteProject
+      summary: Archive a project
+      parameters:
+        - { $ref: '#/components/parameters/ProjectId' }
+      responses:
+        '200':
+          description: Archived
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Project' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/tasks:
+    get:
+      tags: [tasks]
+      operationId: listTasks
+      summary: List tasks
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: projectId
+          in: query
+          schema: { type: string }
+        - { $ref: '#/components/parameters/Page' }
+      responses:
+        '200':
+          description: Tasks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Task' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+    post:
+      tags: [tasks]
+      operationId: createTask
+      summary: Create a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Task' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Task' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/tasks/{taskId}:
+    get:
+      tags: [tasks]
+      operationId: getTask
+      summary: Read a task
+      parameters:
+        - { $ref: '#/components/parameters/TaskId' }
+      responses:
+        '200':
+          description: The task
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Task' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [tasks]
+      operationId: updateTask
+      summary: Partially update a task
+      parameters:
+        - { $ref: '#/components/parameters/TaskId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Task' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Task' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [tasks]
+      operationId: deleteTask
+      summary: Archive a task
+      parameters:
+        - { $ref: '#/components/parameters/TaskId' }
+      responses:
+        '200':
+          description: Archived
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Task' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/github/repositories:
+    get:
+      tags: [github]
+      operationId: listGithubRepositories
+      summary: List repositories available to the GitHub App installation
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PerPage' }
+      responses:
+        '200':
+          description: Repositories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/GithubRepository' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+
+  /api/v1/github/contents:
+    get:
+      tags: [github]
+      operationId: getGithubContent
+      summary: Read a UTF-8 file or list a directory
+      description: >-
+        Omit path to read the repository root. Omit ref to use the repository
+        default branch. Binary files are not supported.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/OwnerQuery' }
+        - { $ref: '#/components/parameters/RepoQuery' }
+        - name: path
+          in: query
+          required: false
+          schema: { type: string }
+        - name: ref
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        '200':
+          description: File or directory
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/GithubContent' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '415': { $ref: '#/components/responses/UnsupportedContent' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+
+  /api/v1/github/branches:
+    get:
+      tags: [github]
+      operationId: listGithubBranches
+      summary: List branches
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/OwnerQuery' }
+        - { $ref: '#/components/parameters/RepoQuery' }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PerPage' }
+      responses:
+        '200':
+          description: Branches
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/GithubBranchList' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+    post:
+      tags: [github]
+      operationId: createGithubBranch
+      summary: Create a branch
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [owner, repo, branch]
+              properties:
+                owner: { type: string }
+                repo: { type: string }
+                branch: { type: string }
+                baseRef:
+                  type: string
+                  description: Defaults to the repository default branch.
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/GithubBranchRef' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UpstreamRejected' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+
+  /api/v1/github/branches/{branch}:
+    patch:
+      tags: [github]
+      operationId: updateGithubBranch
+      summary: Fast-forward a branch
+      description: >-
+        Requires the expected current commit SHA. The update is always
+        non-force; a force push cannot be requested. Default branches may be
+        updated when GitHub allows the fast-forward.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: branch
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [owner, repo, expectedCurrentSha, newSha]
+              properties:
+                owner: { type: string }
+                repo: { type: string }
+                expectedCurrentSha: { type: string }
+                newSha: { type: string }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/GithubBranchRef' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UpstreamRejected' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+
+  /api/v1/github/files:
+    post:
+      tags: [github]
+      operationId: createGithubFile
+      summary: Create a UTF-8 file
+      description: >-
+        Writes directly to the named branch, including default branches. Fails
+        with 409 if the path already exists. Paths beneath .github/workflows are
+        blocked.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [owner, repo, branch, path, content, message]
+              properties:
+                owner: { type: string }
+                repo: { type: string }
+                branch: { type: string }
+                path: { type: string }
+                content: { type: string, maxLength: 250000 }
+                message: { type: string, maxLength: 250 }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/GithubFileWrite' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '415': { $ref: '#/components/responses/UnsupportedContent' }
+        '422': { $ref: '#/components/responses/UpstreamRejected' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+    patch:
+      tags: [github]
+      operationId: updateGithubFile
+      summary: Replace a UTF-8 file
+      description: >-
+        Requires the current blob SHA; a stale SHA returns 409. Content fully
+        replaces the file, so read it first and submit complete content.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [owner, repo, branch, path, sha, content, message]
+              properties:
+                owner: { type: string }
+                repo: { type: string }
+                branch: { type: string }
+                path: { type: string }
+                sha: { type: string }
+                content: { type: string, maxLength: 250000 }
+                message: { type: string, maxLength: 250 }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/GithubFileWrite' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '415': { $ref: '#/components/responses/UnsupportedContent' }
+        '422': { $ref: '#/components/responses/UpstreamRejected' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+    delete:
+      tags: [github]
+      operationId: deleteGithubFile
+      summary: Delete a file
+      description: Requires the current blob SHA; a stale SHA returns 409.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [owner, repo, branch, path, sha, message]
+              properties:
+                owner: { type: string }
+                repo: { type: string }
+                branch: { type: string }
+                path: { type: string }
+                sha: { type: string }
+                message: { type: string, maxLength: 250 }
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/GithubFileWrite' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UpstreamRejected' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+
+  /api/v1/github/pull-requests:
+    post:
+      tags: [github]
+      operationId: createGithubPullRequest
+      summary: Create a pull request
+      description: Draft defaults to true.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [owner, repo, title, head, base]
+              properties:
+                owner: { type: string }
+                repo: { type: string }
+                title: { type: string, maxLength: 250 }
+                body: { type: string }
+                head: { type: string }
+                base: { type: string }
+                draft: { type: boolean, default: true }
+                maintainerCanModify: { type: boolean, default: true }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/GithubPullRequest' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UpstreamRejected' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+
+  /api/v1/github/pull-requests/{pullNumber}:
+    get:
+      tags: [github]
+      operationId: getGithubPullRequest
+      summary: Read a pull request
+      description: >-
+        mergeable may be null while GitHub is still computing mergeability. Do
+        not treat null as mergeable.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PullNumber' }
+        - { $ref: '#/components/parameters/OwnerQuery' }
+        - { $ref: '#/components/parameters/RepoQuery' }
+      responses:
+        '200':
+          description: The pull request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/GithubPullRequest' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+    patch:
+      tags: [github]
+      operationId: updateGithubPullRequest
+      summary: Update, close, or reopen a pull request
+      description: At least one mutable property is required.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PullNumber' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [owner, repo]
+              properties:
+                owner: { type: string }
+                repo: { type: string }
+                title: { type: string, maxLength: 250 }
+                body: { type: string }
+                state: { type: string, enum: [open, closed] }
+                base: { type: string }
+                maintainerCanModify: { type: boolean }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/GithubPullRequest' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UpstreamRejected' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
+
+  /api/v1/github/pull-requests/{pullNumber}/merge:
+    post:
+      tags: [github]
+      operationId: mergeGithubPullRequest
+      summary: Merge a pull request
+      description: >-
+        Requires the expected current head SHA; a stale SHA returns 409. Branch
+        protection, required reviews, and required status checks remain
+        authoritative and are never bypassed.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/PullNumber' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [owner, repo, expectedHeadSha, mergeMethod]
+              properties:
+                owner: { type: string }
+                repo: { type: string }
+                expectedHeadSha: { type: string }
+                mergeMethod: { type: string, enum: [merge, squash, rebase] }
+                commitTitle: { type: string, maxLength: 250 }
+                commitMessage: { type: string }
+      responses:
+        '200':
+          description: Merge attempted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/GithubMergeResult' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UpstreamRejected' }
+        '502': { $ref: '#/components/responses/UpstreamUnavailable' }
