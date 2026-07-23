@@ -4,10 +4,19 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..');
-const schemaPath = path.join(ROOT, 'docs', 'openapi', 'zoro-context-read-action.yaml');
+const schemaPath = path.join(
+  ROOT,
+  'docs',
+  'openapi',
+  'zoro-context-read-action.yaml'
+);
 const docsPath = path.join(ROOT, 'docs', 'CONTEXT_READ_MODEL.md');
 const productionUrl = 'https://context-api-3b9dfadf403e.herokuapp.com';
-const expectedOperationIds = ['resolveContext', 'listProjectsOptimized', 'listTasksOptimized'];
+const expectedOperationIds = [
+  'resolveContext',
+  'listProjectsOptimized',
+  'listTasksOptimized',
+];
 
 function fail(message) {
   process.stderr.write(`Context read release validation failed: ${message}\n`);
@@ -31,12 +40,14 @@ if (schema) {
     fail(`Action schema must use production URL ${productionUrl}`);
   }
 
-  const operationIds = [...schema.matchAll(/^\s+operationId:\s+(\S+)\s*$/gm)].map(
-    (match) => match[1]
-  );
+  const operationIds = [
+    ...schema.matchAll(/^\s+operationId:\s+(\S+)\s*$/gm),
+  ].map((match) => match[1]);
 
   if (operationIds.length !== expectedOperationIds.length) {
-    fail(`expected ${expectedOperationIds.length} operation IDs, found ${operationIds.length}`);
+    fail(
+      `expected ${expectedOperationIds.length} operation IDs, found ${operationIds.length}`
+    );
   }
 
   if (new Set(operationIds).size !== operationIds.length) {
@@ -49,10 +60,24 @@ if (schema) {
     }
   }
 
-  for (const parameter of ['cursor', 'limit', 'view', 'includeTotal', 'updatedAfter']) {
+  for (const parameter of [
+    'cursor',
+    'limit',
+    'view',
+    'includeTotal',
+    'updatedAfter',
+  ]) {
     if (!schema.includes(`name: ${parameter}`)) {
       fail(`missing optimized read parameter ${parameter}`);
     }
+  }
+
+  if (schema.includes('$ref:')) {
+    fail('Action schema must keep parameters and responses flattened');
+  }
+
+  if (!schema.includes('content:') || !schema.includes('application/json:')) {
+    fail('successful operations must declare JSON response content');
   }
 
   if (schema.includes('bearerAuth')) {
