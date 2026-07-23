@@ -39,6 +39,16 @@ function baseFields(doc) {
   };
 }
 
+function summaryBaseFields(doc) {
+  return {
+    tags: toArray(doc.tags),
+    source: serializeSource(doc.source),
+    status: doc.status,
+    version: doc.version,
+    updatedAt: toIso(doc.updatedAt),
+  };
+}
+
 function serializeProfile(doc) {
   return {
     key: doc.key,
@@ -54,6 +64,20 @@ function serializeProfile(doc) {
   };
 }
 
+function serializeProfileSummary(doc) {
+  return {
+    key: doc.key,
+    displayName: doc.displayName,
+    professionalRoles: toArray(doc.professionalRoles),
+    preferredStack: toArray(doc.preferredStack),
+    responsePreferences: toArray(doc.responsePreferences),
+    testingPreferences: toArray(doc.testingPreferences),
+    architecturePreferences: toArray(doc.architecturePreferences),
+    communicationPreferences: toArray(doc.communicationPreferences),
+    ...summaryBaseFields(doc),
+  };
+}
+
 function serializeCodingConvention(doc) {
   return {
     key: doc.key,
@@ -66,6 +90,20 @@ function serializeCodingConvention(doc) {
     projectId: doc.projectId ?? null,
     priority: doc.priority,
     ...baseFields(doc),
+  };
+}
+
+function serializeCodingConventionSummary(doc) {
+  return {
+    key: doc.key,
+    title: doc.title,
+    description: doc.description ?? null,
+    scope: doc.scope,
+    technology: toArray(doc.technology),
+    layer: toArray(doc.layer),
+    projectId: doc.projectId ?? null,
+    priority: doc.priority,
+    ...summaryBaseFields(doc),
   };
 }
 
@@ -96,6 +134,21 @@ function serializeProject(doc) {
   };
 }
 
+function serializeProjectSummary(doc) {
+  return {
+    projectId: doc.projectId,
+    slug: doc.slug,
+    name: doc.name,
+    summary: doc.summary ?? null,
+    lifecycleState: doc.lifecycleState,
+    repositoryUrl: doc.repositoryUrl ?? null,
+    liveUrl: doc.liveUrl ?? null,
+    technologyStack: toArray(doc.technologyStack),
+    currentFocus: doc.currentFocus ?? null,
+    ...summaryBaseFields(doc),
+  };
+}
+
 function serializeTask(doc) {
   return {
     taskId: doc.taskId,
@@ -114,6 +167,20 @@ function serializeTask(doc) {
   };
 }
 
+function serializeTaskSummary(doc) {
+  return {
+    taskId: doc.taskId,
+    title: doc.title,
+    projectId: doc.projectId,
+    status: doc.status,
+    priority: doc.priority,
+    dependencies: toArray(doc.dependencies),
+    tags: toArray(doc.tags),
+    source: serializeSource(doc.source),
+    updatedAt: toIso(doc.updatedAt),
+  };
+}
+
 function serializeInstructionSet(doc) {
   return {
     key: doc.key,
@@ -124,6 +191,17 @@ function serializeInstructionSet(doc) {
     workflowStage: doc.workflowStage,
     applicableClients: toArray(doc.applicableClients),
     ...baseFields(doc),
+  };
+}
+
+function serializeInstructionSetSummary(doc) {
+  return {
+    key: doc.key,
+    title: doc.title,
+    description: doc.description ?? null,
+    workflowStage: doc.workflowStage,
+    applicableClients: toArray(doc.applicableClients),
+    ...summaryBaseFields(doc),
   };
 }
 
@@ -162,6 +240,15 @@ function serializeIdeasHubContext(doc) {
   };
 }
 
+function serializeIdeasHubContextSummary(doc) {
+  return {
+    section: doc.section,
+    title: doc.title,
+    description: doc.description ?? null,
+    ...summaryBaseFields(doc),
+  };
+}
+
 function serializeGlossaryEntry(doc) {
   return {
     term: doc.term,
@@ -172,6 +259,16 @@ function serializeGlossaryEntry(doc) {
     relatedTerms: toArray(doc.relatedTerms),
     description: doc.description ?? null,
     ...baseFields(doc),
+  };
+}
+
+function serializeGlossaryEntrySummary(doc) {
+  return {
+    term: doc.term,
+    normalizedKey: doc.normalizedKey,
+    definition: doc.definition,
+    scope: doc.scope,
+    ...summaryBaseFields(doc),
   };
 }
 
@@ -194,19 +291,40 @@ function serializeLearning(doc) {
   };
 }
 
+function serializeLearningSummary(doc) {
+  return {
+    learningId: doc.learningId,
+    title: doc.title,
+    category: doc.category,
+    projectId: doc.projectId ?? null,
+    reviewStatus: doc.reviewStatus,
+    supersedes: doc.supersedes ?? null,
+    description: doc.description ?? null,
+    ...summaryBaseFields(doc),
+  };
+}
+
 function serializeMany(serializer) {
   return (docs) => docs.map((doc) => serializer(doc));
 }
 
 module.exports = {
   serializeProfile,
+  serializeProfileSummary,
   serializeCodingConvention,
+  serializeCodingConventionSummary,
   serializeProject,
+  serializeProjectSummary,
   serializeTask,
+  serializeTaskSummary,
   serializeInstructionSet,
+  serializeInstructionSetSummary,
   serializeIdeasHubContext,
+  serializeIdeasHubContextSummary,
   serializeGlossaryEntry,
+  serializeGlossaryEntrySummary,
   serializeLearning,
+  serializeLearningSummary,
   serializeMany,
   serializeSource,
 };
