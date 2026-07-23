@@ -150,5 +150,10 @@ module.exports = {
     serializers.serializeTask,
     serializers.serializeTaskSummary
   ),
-  getTask: createResourceHandler('taskId', taskService.getTaskById, serializers.serializeTask, 'Task'),
+  getTask: createResourceHandler(
+    'taskId',
+    taskService.getTaskById,
+    serializers.serializeTask,
+    'Task'
+  ),
 };
