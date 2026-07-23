@@ -53,7 +53,7 @@ Defaults:
 
 - representation: `summary`;
 - total count: omitted;
-- pagination: `updatedAt` and MongoDB `_id` keyset cursor;
+- pagination: `updatedAt` plus the domain's indexed stable identifier;
 - maximum limit: `100`.
 
 Example response metadata:
@@ -63,7 +63,7 @@ Example response metadata:
   "count": 20,
   "limit": 20,
   "hasNextPage": true,
-  "nextCursor": "eyJ1cGRhdGVkQXQiOiIuLi4iLCJpZCI6Ii4uLiJ9",
+  "nextCursor": "eyJtb2RlbCI6IlByb2plY3QiLCJ2YWx1ZXMiOnsiLi4uIjoiLi4uIn19",
   "version": "v1"
 }
 ```
@@ -224,6 +224,7 @@ GET collection?limit=20
 - `PUT` remains unsupported.
 - Writes and soft-delete behavior are unchanged.
 - Cursor values are opaque and must not be edited.
+- A cursor is bound to its collection and stable sort; cross-collection reuse returns `400`.
 - A malformed or unsupported cursor returns `400 VALIDATION_ERROR`.
 - Archived records remain excluded unless `status=archived` is requested.
 - The context routes remain public and unauthenticated; do not store sensitive data.
