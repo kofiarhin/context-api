@@ -1,5 +1,6 @@
 'use strict';
 
+const { getVercelConfig } = require('../config/vercel');
 const { ValidationError, VercelForbiddenError } = require('../utils/errors');
 
 function normalizeList(values = []) {
@@ -54,7 +55,8 @@ function assertEnvironmentValueInput(input) {
   }
 }
 
-function createPolicy(env) {
+function createPolicy(baseEnv = {}, options = {}) {
+  const env = getVercelConfig(baseEnv, options.source || process.env);
   const projectAllowlist = normalizeList(env.vercelProjectAllowlist);
   const domainAllowlist = normalizeList(env.vercelDomainAllowlist);
   const repositoryAllowlist = normalizeList(env.vercelRepositoryAllowlist);
