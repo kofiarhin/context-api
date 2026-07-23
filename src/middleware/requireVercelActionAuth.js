@@ -1,6 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
+const { getVercelConfig } = require('../config/vercel');
 const { AuthenticationRequiredError } = require('../utils/errors');
 
 const BEARER = /^Bearer +(.+)$/i;
@@ -11,8 +12,14 @@ function secretsMatch(supplied, expected) {
   return crypto.timingSafeEqual(suppliedDigest, expectedDigest);
 }
 
-function requireVercelActionAuth(env) {
-  const expected = env.zoroVercelApiKey;
+function requireVercelActionAuth(baseEnv = {}, options = {}) {
+  let expected = null;
+
+  try {
+    expected = getVercelConfig(baseEnv, options.source || process.env).zoroVercelApiKey;
+  } catch {
+    expected = null;
+  }
 
   return function vercelActionAuth(req, res, next) {
     if (!expected) {
@@ -34,3 +41,4 @@ function requireVercelActionAuth(env) {
 }
 
 module.exports = requireVercelActionAuth;
+module.exports.secretsMatch = secretsMatch;
