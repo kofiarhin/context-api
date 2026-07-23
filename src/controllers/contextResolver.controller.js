@@ -15,10 +15,16 @@ function sourceReference(type, identifier, source) {
 
 const resolveContext = asyncHandler(async (req, res) => {
   const resolved = await contextResolverService.resolveContext(req.validated.filters);
-  const profile = resolved.profile ? serializers.serializeProfileSummary(resolved.profile) : null;
-  const project = resolved.project ? serializers.serializeProjectSummary(resolved.project) : null;
+  const profile = resolved.profile
+    ? serializers.serializeProfileSummary(resolved.profile)
+    : null;
+  const project = resolved.project
+    ? serializers.serializeProjectSummary(resolved.project)
+    : null;
   const task = resolved.task ? serializers.serializeTaskSummary(resolved.task) : null;
-  const instructionSets = resolved.instructionSets.map(serializers.serializeInstructionSetSummary);
+  const instructionSets = resolved.instructionSets.map(
+    serializers.serializeInstructionSetSummary
+  );
   const codingConventions = resolved.codingConventions.map(
     serializers.serializeCodingConventionSummary
   );
