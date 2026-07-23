@@ -2,8 +2,6 @@
 
 const { ValidationError } = require('../utils/errors');
 
-const CURSOR_ID = /^[0-9a-fA-F]{24}$/;
-
 const SUMMARY_PROJECTIONS = Object.freeze({
   CodingConvention: [
     'key',
@@ -101,34 +99,85 @@ function escapeRegExp(value) {
 }
 
 function failCursor(message) {
-  throw new ValidationError('Request validation failed.', [{ field: 'cursor', message }]);
+  throw new ValidationError('Request validation failed.', [
+    { field: 'cursor', message },
+  ]);
 }
 
-function encodeCursor(record) {
-  if (!record || !record.updatedAt || !record._id) {
-    return null;
+function serializeCursorValue(field, value) {
+  if (field === 'updatedAt') {
+    return new Date(value).toISOString();
   }
 
-  return Buffer.from(
-    JSON.stringify({ updatedAt: new Date(record.updatedAt).toISOString(), id: String(record._id) }),
-    'utf8'
-  ).toString('base64url');
+  return value;
 }
 
-function decodeCursor(rawCursor) {
+function parseCursorValue(field, value) {
+  if (field === 'updatedAt') {
+    const timestamp = Date.parse(value);
+
+    if (Number.isNaN(timestamp)) {
+      failCursor('Cursor is invalid or no longer supported.');
+    }
+
+    return new Date(timestamp);
+  }
+
+  if (field === 'version') {
+    if (!Number.isInteger(value) || value < 1) {
+      failCursor('Cursor is invalid or no longer supported.');
+    }
+
+    return value;
+  }
+
+  if (typeof value !== 'string' || value.length === 0) {
+    failCursor('Cursor is invalid or no longer supported.');
+  }
+
+  return value;
+}
+
+function encodeCursor(record, modelName, sort) {
+  const values = {};
+
+  for (const field of Object.keys(sort)) {
+    if (record[field] === undefined || record[field] === null) {
+      failCursor('The current page cannot produce a stable cursor.');
+    }
+
+    values[field] = serializeCursorValue(field, record[field]);
+  }
+
+  return Buffer.from(JSON.stringify({ model: modelName, values }), 'utf8').toString(
+    'base64url'
+  );
+}
+
+function decodeCursor(rawCursor, modelName, sort) {
   if (!rawCursor) {
     return null;
   }
 
   try {
     const parsed = JSON.parse(Buffer.from(rawCursor, 'base64url').toString('utf8'));
-    const timestamp = Date.parse(parsed.updatedAt);
+    const expectedFields = Object.keys(sort);
+    const actualFields = Object.keys(parsed.values || {});
 
-    if (Number.isNaN(timestamp) || typeof parsed.id !== 'string' || !CURSOR_ID.test(parsed.id)) {
-      failCursor('Cursor is invalid or no longer supported.');
+    if (
+      parsed.model !== modelName ||
+      actualFields.length !== expectedFields.length ||
+      !expectedFields.every((field) => actualFields.includes(field))
+    ) {
+      failCursor('Cursor does not belong to this collection.');
     }
 
-    return { updatedAt: new Date(timestamp), id: parsed.id };
+    return Object.fromEntries(
+      expectedFields.map((field) => [
+        field,
+        parseCursorValue(field, parsed.values[field]),
+      ])
+    );
   } catch (error) {
     if (error instanceof ValidationError) {
       throw error;
@@ -147,30 +196,36 @@ function applyUpdatedAfter(filter, updatedAfter) {
   return { ...filter, updatedAt: { $gt: updatedAfter } };
 }
 
-function applyCursor(filter, cursor) {
-  if (!cursor) {
+function applyCursor(filter, cursorValues, sort) {
+  if (!cursorValues) {
     return filter;
   }
 
-  return {
-    $and: [
-      filter,
-      {
-        $or: [
-          { updatedAt: { $lt: cursor.updatedAt } },
-          { updatedAt: cursor.updatedAt, _id: { $lt: cursor.id } },
-        ],
-      },
-    ],
-  };
+  const entries = Object.entries(sort);
+  const clauses = entries.map(([field, direction], index) => {
+    const clause = {};
+
+    for (let prefixIndex = 0; prefixIndex < index; prefixIndex += 1) {
+      const [prefixField] = entries[prefixIndex];
+      clause[prefixField] = cursorValues[prefixField];
+    }
+
+    clause[field] = {
+      [direction === -1 ? '$lt' : '$gt']: cursorValues[field],
+    };
+
+    return clause;
+  });
+
+  return { $and: [filter, { $or: clauses }] };
 }
 
 /**
  * Runs a bounded, lean collection query.
  *
  * Offset mode preserves the original page/pageSize contract and totals by
- * default. Cursor mode uses updatedAt/_id keyset pagination, compact summaries,
- * and no count query unless the caller explicitly requests one.
+ * default. Cursor mode uses each domain's indexed stable sort, compact
+ * summaries, and no count query unless the caller explicitly requests one.
  *
  * Archived records are hidden unless the caller explicitly filters by status.
  */
@@ -182,12 +237,15 @@ async function paginate(Model, filter, sort, pagination) {
   const includeTotal = pagination.includeTotal !== false;
   const isCursorMode = pagination.mode === 'cursor';
   const requestedLimit = isCursorMode ? pagination.limit : pagination.pageSize;
-  const cursor = isCursorMode ? decodeCursor(pagination.cursor) : null;
-  const queryFilter = isCursorMode ? applyCursor(effectiveFilter, cursor) : effectiveFilter;
-  const querySort = isCursorMode ? { updatedAt: -1, _id: -1 } : sort;
+  const cursorValues = isCursorMode
+    ? decodeCursor(pagination.cursor, Model.modelName, sort)
+    : null;
+  const queryFilter = isCursorMode
+    ? applyCursor(effectiveFilter, cursorValues, sort)
+    : effectiveFilter;
   const queryLimit = isCursorMode ? requestedLimit + 1 : requestedLimit;
 
-  let query = Model.find(queryFilter).sort(querySort);
+  let query = Model.find(queryFilter).sort(sort);
 
   if (!isCursorMode) {
     query = query.skip(pagination.skip);
@@ -203,8 +261,12 @@ async function paginate(Model, filter, sort, pagination) {
   ]);
 
   const hasNextPage = isCursorMode && queriedItems.length > requestedLimit;
-  const items = hasNextPage ? queriedItems.slice(0, requestedLimit) : queriedItems;
-  const nextCursor = hasNextPage ? encodeCursor(items[items.length - 1]) : null;
+  const items = hasNextPage
+    ? queriedItems.slice(0, requestedLimit)
+    : queriedItems;
+  const nextCursor = hasNextPage
+    ? encodeCursor(items[items.length - 1], Model.modelName, sort)
+    : null;
 
   return {
     items,
@@ -219,7 +281,6 @@ async function paginate(Model, filter, sort, pagination) {
 }
 
 module.exports = {
-  CURSOR_ID,
   SUMMARY_PROJECTIONS,
   escapeRegExp,
   encodeCursor,
