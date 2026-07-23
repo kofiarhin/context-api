@@ -1,0 +1,200 @@
+openapi: 3.1.0
+
+# Read-only companion Action for compact Context API retrieval.
+# It deliberately remains separate from the 27-operation GitHub/write Action.
+
+info:
+  title: Context API Read Model
+  version: 1.0.0
+  description: >-
+    Compact project and task summaries plus a bounded task-oriented context
+    resolver. All operations are read-only and use the Context API production
+    host. Full records remain available through the primary Context API Action.
+
+servers:
+  - url: https://context-api-3b9dfadf403e.herokuapp.com
+    description: Production
+
+security: []
+
+tags:
+  - name: context
+  - name: projects
+  - name: tasks
+
+components:
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: Opaque cursor returned by the previous page.
+      schema: { type: string, maxLength: 1024 }
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: Selects cursor mode and bounds the page size.
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    View:
+      name: view
+      in: query
+      required: false
+      description: Cursor mode defaults to summary; offset mode defaults to detail.
+      schema:
+        type: string
+        enum: [summary, detail]
+    IncludeTotal:
+      name: includeTotal
+      in: query
+      required: false
+      description: Run an exact count query only when required.
+      schema: { type: boolean, default: false }
+    UpdatedAfter:
+      name: updatedAfter
+      in: query
+      required: false
+      description: Return records changed after this ISO-8601 timestamp.
+      schema: { type: string, format: date-time }
+
+  schemas:
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        error:
+          type: object
+          additionalProperties: true
+        meta:
+          type: object
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Validation failed
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Project or task not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+paths:
+  /api/v1/context/resolve:
+    get:
+      tags: [context]
+      operationId: resolveContext
+      summary: Resolve a bounded context package for one client and optional project or task
+      parameters:
+        - name: client
+          in: query
+          required: true
+          schema: { type: string }
+        - name: projectId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: taskId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: stage
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - discovery
+              - specification
+              - implementation
+              - verification
+              - code-review
+              - documentation
+              - repository-update
+        - name: maxItems
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 20, default: 8 }
+        - { $ref: '#/components/parameters/UpdatedAfter' }
+      responses:
+        '200':
+          description: Bounded context package with revision and summary references
+          headers:
+            ETag:
+              description: Weak response hash for conditional requests
+              schema: { type: string }
+        '304': { description: Context package is unchanged }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/projects:
+    get:
+      tags: [projects]
+      operationId: listProjectsOptimized
+      summary: List compact project summaries with cursor pagination
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { type: string }
+        - name: lifecycleState
+          in: query
+          required: false
+          schema: { type: string }
+        - name: technology
+          in: query
+          required: false
+          schema: { type: string }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/View' }
+        - { $ref: '#/components/parameters/IncludeTotal' }
+        - { $ref: '#/components/parameters/UpdatedAfter' }
+      responses:
+        '200':
+          description: Project summaries and next cursor
+          headers:
+            ETag:
+              description: Weak response hash for conditional requests
+              schema: { type: string }
+        '304': { description: Project page is unchanged }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /api/v1/tasks:
+    get:
+      tags: [tasks]
+      operationId: listTasksOptimized
+      summary: List compact task summaries with cursor pagination
+      parameters:
+        - name: projectId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [backlog, ready, in-progress, blocked, done, archived]
+        - name: priority
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/View' }
+        - { $ref: '#/components/parameters/IncludeTotal' }
+        - { $ref: '#/components/parameters/UpdatedAfter' }
+      responses:
+        '200':
+          description: Task summaries and next cursor
+          headers:
+            ETag:
+              description: Weak response hash for conditional requests
+              schema: { type: string }
+        '304': { description: Task page is unchanged }
+        '400': { $ref: '#/components/responses/BadRequest' }
