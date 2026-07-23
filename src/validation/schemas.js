@@ -67,7 +67,11 @@ const CONTEXT_RESOLVER_SCHEMA = {
   client: { type: 'identifier' },
   projectId: { type: 'identifier' },
   taskId: { type: 'identifier' },
-  stage: { type: 'enum', values: WORKFLOW_STAGES, target: 'workflowStage' },
+  stage: {
+    type: 'enum',
+    values: WORKFLOW_STAGES,
+    target: 'workflowStage',
+  },
   updatedAfter: { type: 'isoDate' },
 };
 
@@ -80,7 +84,9 @@ function validateContextResolverQuery(query) {
   const rawMaxItems = normalized.maxItems;
   delete normalized.maxItems;
 
-  const { filters } = validateQuery(normalized, CONTEXT_RESOLVER_SCHEMA, { pagination: false });
+  const { filters } = validateQuery(normalized, CONTEXT_RESOLVER_SCHEMA, {
+    pagination: false,
+  });
   const details = [];
 
   if (!filters.client) {
@@ -96,7 +102,10 @@ function validateContextResolverQuery(query) {
       maxItems = Number(rawMaxItems);
 
       if (maxItems < 1 || maxItems > 20) {
-        details.push({ field: 'maxItems', message: 'Value must be between 1 and 20.' });
+        details.push({
+          field: 'maxItems',
+          message: 'Value must be between 1 and 20.',
+        });
       }
     }
   }
@@ -112,7 +121,8 @@ module.exports = {
   QUERY_SCHEMAS,
   CONTEXT_RESOLVER_SCHEMA,
   validateIdentifierParam,
-  validateProfileQuery: (query) => validateQuery(query, {}, { pagination: false }),
+  validateProfileQuery: (query) =>
+    validateQuery(query, {}, { pagination: false }),
   validateContextResolverQuery,
   validateCodingConventionQuery: createListValidator('codingConventions'),
   validateProjectQuery: createListValidator('projects'),
