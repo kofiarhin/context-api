@@ -34,5 +34,6 @@ instructionSetSchema.index({ key: 1, version: -1 }, { unique: true });
 instructionSetSchema.index({ status: 1 });
 instructionSetSchema.index({ workflowStage: 1 });
 instructionSetSchema.index({ applicableClients: 1 });
+instructionSetSchema.index({ updatedAt: -1, key: 1, version: -1 });
 
 module.exports = model('InstructionSet', instructionSetSchema, 'instruction_sets');
