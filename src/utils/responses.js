@@ -59,8 +59,11 @@ function requestMatchesEtag(req, etag) {
 
 function sendJson(res, statusCode, body) {
   const etag = buildEtag(body);
-  res.setHeader('ETag', etag);
-  res.setHeader('Cache-Control', 'private, must-revalidate');
+
+  if (typeof res.setHeader === 'function') {
+    res.setHeader('ETag', etag);
+    res.setHeader('Cache-Control', 'private, must-revalidate');
+  }
 
   const method = res.req && res.req.method;
 
