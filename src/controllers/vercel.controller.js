@@ -3,6 +3,7 @@
 const asyncHandler = require('../utils/asyncHandler');
 const { sendResource, sendPagedCollection } = require('../utils/responses');
 const vercelService = require('../services/vercel.service');
+const vercelLogsService = require('../services/vercelLogs.service');
 
 function input(req) {
   return {
@@ -12,16 +13,16 @@ function input(req) {
   };
 }
 
-function resource(method, status = 200) {
+function resource(method, status = 200, service = vercelService) {
   return asyncHandler(async (req, res) => {
-    const result = await vercelService[method](input(req));
+    const result = await service[method](input(req));
     sendResource(res, result, status);
   });
 }
 
-function collection(method) {
+function collection(method, service = vercelService) {
   return asyncHandler(async (req, res) => {
-    const result = await vercelService[method](input(req));
+    const result = await service[method](input(req));
     sendPagedCollection(res, result.data, result.meta || {});
   });
 }
@@ -43,6 +44,7 @@ module.exports = {
   cancelDeployment: resource('cancelDeployment'),
   deleteDeployment: resource('deleteDeployment'),
   getDeploymentEvents: collection('getDeploymentEvents'),
+  getDeploymentLogs: collection('getDeploymentLogs', vercelLogsService),
   listDeploymentFiles: collection('listDeploymentFiles'),
   promoteDeployment: resource('promoteDeployment'),
   rollbackProject: resource('rollbackProject'),
