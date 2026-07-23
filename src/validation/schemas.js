@@ -9,7 +9,9 @@ const {
   WORKFLOW_STAGES,
   LEARNING_CATEGORIES,
 } = require('../utils/enums');
+const { ValidationError } = require('../utils/errors');
 const { validateQuery, validateIdentifierParam } = require('./common');
+const { validateReadQuery } = require('./readQuery');
 
 /**
  * Query field allowlists per domain.
@@ -30,7 +32,6 @@ const QUERY_SCHEMAS = {
     status: { type: 'enum', values: STATUSES },
     lifecycleState: { type: 'enum', values: PROJECT_LIFECYCLE_STATES },
     technology: { type: 'identifier' },
-    updatedAfter: { type: 'isoDate' },
   },
 
   instructionSets: {
@@ -62,14 +63,57 @@ const QUERY_SCHEMAS = {
   },
 };
 
+const CONTEXT_RESOLVER_SCHEMA = {
+  client: { type: 'identifier' },
+  projectId: { type: 'identifier' },
+  taskId: { type: 'identifier' },
+  stage: { type: 'enum', values: WORKFLOW_STAGES, target: 'workflowStage' },
+  updatedAfter: { type: 'isoDate' },
+};
+
 function createListValidator(schemaName) {
-  return (query) => validateQuery(query, QUERY_SCHEMAS[schemaName]);
+  return (query) => validateReadQuery(query, QUERY_SCHEMAS[schemaName]);
+}
+
+function validateContextResolverQuery(query) {
+  const normalized = { ...query };
+  const rawMaxItems = normalized.maxItems;
+  delete normalized.maxItems;
+
+  const { filters } = validateQuery(normalized, CONTEXT_RESOLVER_SCHEMA, { pagination: false });
+  const details = [];
+
+  if (!filters.client) {
+    details.push({ field: 'client', message: 'Client is required.' });
+  }
+
+  let maxItems = 8;
+
+  if (rawMaxItems !== undefined && rawMaxItems !== '') {
+    if (Array.isArray(rawMaxItems) || !/^\d+$/.test(String(rawMaxItems))) {
+      details.push({ field: 'maxItems', message: 'Value must be an integer.' });
+    } else {
+      maxItems = Number(rawMaxItems);
+
+      if (maxItems < 1 || maxItems > 20) {
+        details.push({ field: 'maxItems', message: 'Value must be between 1 and 20.' });
+      }
+    }
+  }
+
+  if (details.length > 0) {
+    throw new ValidationError('Request validation failed.', details);
+  }
+
+  return { filters: { ...filters, maxItems }, pagination: null };
 }
 
 module.exports = {
   QUERY_SCHEMAS,
+  CONTEXT_RESOLVER_SCHEMA,
   validateIdentifierParam,
   validateProfileQuery: (query) => validateQuery(query, {}, { pagination: false }),
+  validateContextResolverQuery,
   validateCodingConventionQuery: createListValidator('codingConventions'),
   validateProjectQuery: createListValidator('projects'),
   validateInstructionSetQuery: createListValidator('instructionSets'),
