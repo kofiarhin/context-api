@@ -33,14 +33,19 @@ function buildPaginationMeta(pagination) {
 
   if (Number.isInteger(pagination.total)) {
     meta.total = pagination.total;
-    meta.totalPages = pagination.pageSize > 0 ? Math.ceil(pagination.total / pagination.pageSize) : 0;
+    meta.totalPages =
+      pagination.pageSize > 0 ? Math.ceil(pagination.total / pagination.pageSize) : 0;
   }
 
   return meta;
 }
 
 function buildEtag(body) {
-  const digest = crypto.createHash('sha256').update(JSON.stringify(body)).digest('base64url');
+  const digest = crypto
+    .createHash('sha256')
+    .update(JSON.stringify(body))
+    .digest('base64url');
+
   return `W/"${digest}"`;
 }
 
@@ -100,7 +105,11 @@ function sendCollection(res, data, pagination = null) {
 function sendPagedCollection(res, data, meta, statusCode = 200) {
   return sendJson(res, statusCode, {
     data,
-    meta: { count: Array.isArray(data) ? data.length : 1, ...meta, version: API_VERSION },
+    meta: {
+      count: Array.isArray(data) ? data.length : 1,
+      ...meta,
+      version: API_VERSION,
+    },
   });
 }
 
