@@ -29,14 +29,13 @@ function sharedFields(overrides = {}) {
 }
 
 /**
- * Applies timestamps, the shared cursor index, and safe serialization options.
+ * Applies timestamps and strips MongoDB internals from any serialized output.
  *
  * Serializers remain the authoritative allowlist; this is defence in depth so a
  * document that bypasses one can still never leak `_id` or `__v`.
  */
 function applyBaseOptions(schema) {
   schema.set('timestamps', true);
-  schema.index({ updatedAt: -1, _id: -1 });
 
   const transform = (doc, ret) => {
     delete ret._id;
