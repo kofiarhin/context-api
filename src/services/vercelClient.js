@@ -1,5 +1,6 @@
 'use strict';
 
+const { getVercelConfig } = require('../config/vercel');
 const { translateVercelError } = require('./vercelErrors');
 
 const API_ORIGIN = 'https://api.vercel.com';
@@ -13,7 +14,8 @@ function appendSearch(url, query = {}) {
   }
 }
 
-function createVercelClient(env, options = {}) {
+function createVercelClient(baseEnv = {}, options = {}) {
+  const env = getVercelConfig(baseEnv, options.source || process.env);
   const fetchImpl = options.fetchImpl || global.fetch;
   if (typeof fetchImpl !== 'function') throw new Error('A fetch implementation is required.');
 
