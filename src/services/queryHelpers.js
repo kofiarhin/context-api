@@ -149,9 +149,10 @@ function encodeCursor(record, modelName, sort) {
     values[field] = serializeCursorValue(field, record[field]);
   }
 
-  return Buffer.from(JSON.stringify({ model: modelName, values }), 'utf8').toString(
-    'base64url'
-  );
+  return Buffer.from(
+    JSON.stringify({ model: modelName, values }),
+    'utf8'
+  ).toString('base64url');
 }
 
 function decodeCursor(rawCursor, modelName, sort) {
@@ -160,7 +161,9 @@ function decodeCursor(rawCursor, modelName, sort) {
   }
 
   try {
-    const parsed = JSON.parse(Buffer.from(rawCursor, 'base64url').toString('utf8'));
+    const parsed = JSON.parse(
+      Buffer.from(rawCursor, 'base64url').toString('utf8')
+    );
     const expectedFields = Object.keys(sort);
     const actualFields = Object.keys(parsed.values || {});
 
@@ -251,7 +254,10 @@ async function paginate(Model, filter, sort, pagination) {
     query = query.skip(pagination.skip);
   }
 
-  if (pagination.view === 'summary' && SUMMARY_PROJECTIONS[Model.modelName]) {
+  if (
+    pagination.view === 'summary' &&
+    SUMMARY_PROJECTIONS[Model.modelName]
+  ) {
     query = query.select(SUMMARY_PROJECTIONS[Model.modelName]);
   }
 
