@@ -17,8 +17,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "verify:github-gateway": "node scripts/validate-github-gateway-release.js",
+    "verify:vercel-gateway": "node scripts/validate-vercel-gateway-release.js",
     "verify:context-read": "node scripts/validate-context-read-release.js",
-    "verify": "npm test && npm run lint && npm run format:check && npm run verify:github-gateway && npm run verify:context-read",
+    "verify": "npm test && npm run lint && npm run format:check && npm run verify:github-gateway && npm run verify:vercel-gateway && npm run verify:context-read",
     "data:extract": "node scripts/extract-ideas-hub-data.js",
     "seed": "node src/seeds/index.js",
     "seed:reset": "node src/seeds/index.js --reset"
