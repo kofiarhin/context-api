@@ -3,11 +3,18 @@
 const { Router } = require('express');
 
 const controller = require('../../controllers/context.controller');
+const contextResolverController = require('../../controllers/contextResolver.controller');
 const crudController = require('../../controllers/crud.controller');
 const { validateQuery, validateParam, validateBody } = require('../../middleware/validate');
 const schemas = require('../../validation/schemas');
 
 const router = Router();
+
+router.get(
+  '/context/resolve',
+  validateQuery(schemas.validateContextResolverQuery),
+  contextResolverController.resolveContext
+);
 
 router.post('/profile', validateBody('profile', 'create'), crudController.create('profile'));
 router.get('/profile', validateQuery(schemas.validateProfileQuery), controller.getProfile);
