@@ -47,14 +47,16 @@ describe('GET /api/v1/context/resolve', () => {
     expect(response.body.data.references.length).toBeGreaterThan(0);
   });
 
-  it('resolves a task with its matching project', async () => {
+  it('derives matching project context from a task ID', async () => {
     const response = await request(app).get(
-      '/api/v1/context/resolve?client=zoro&projectId=context-api&taskId=context-api-health-endpoint'
+      '/api/v1/context/resolve?client=zoro&taskId=context-api-health-endpoint'
     );
 
     expect(response.status).toBe(200);
     expect(response.body.data.task.taskId).toBe('context-api-health-endpoint');
     expect(response.body.data.task).not.toHaveProperty('acceptanceCriteria');
+    expect(response.body.data.project.projectId).toBe('context-api');
+    expect(response.body.data.resolvedFor.projectId).toBe('context-api');
   });
 
   it('rejects a task and project mismatch', async () => {
@@ -67,7 +69,9 @@ describe('GET /api/v1/context/resolve', () => {
   });
 
   it('requires a client identifier', async () => {
-    const response = await request(app).get('/api/v1/context/resolve?projectId=context-api');
+    const response = await request(app).get(
+      '/api/v1/context/resolve?projectId=context-api'
+    );
 
     expect(response.status).toBe(400);
     expect(response.body.error.details[0].field).toBe('client');
