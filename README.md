@@ -12,7 +12,7 @@ The GitHub gateway beneath `/api/v1/github` is the exception: it **requires a be
 
 ## Requirements
 
-- Node.js 20.19 or newer
+- Node.js 24.x
 - npm
 - MongoDB
 
@@ -49,6 +49,9 @@ npm run lint
 npm run lint:fix
 npm run format
 npm run format:check
+npm run verify:context-read
+npm run verify:github-gateway
+npm run verify
 npm run seed
 npm run seed:reset
 ```
@@ -92,8 +95,87 @@ PATCH  /api/v1/<domain>/:identifier
 DELETE /api/v1/<domain>/:identifier
 ```
 
-`PUT` is intentionally not part of the simplified MVP. Because updates are partial, `PUT` and any
-other unsupported verb return `405 Method Not Allowed` with an `Allow` header rather than `404`.
+The bounded resolver is read-only:
+
+```http
+GET /api/v1/context/resolve
+```
+
+`PUT` is intentionally not part of the simplified MVP. Because updates are partial, `PUT` and any other unsupported verb return `405 Method Not Allowed` with an `Allow` header rather than `404`.
+
+## Optimized context reads
+
+The API supports a hot-path read model without breaking the original page-based contract.
+
+### Existing offset flow
+
+A request with no pagination parameters, or with `page` and `pageSize`, keeps the original behavior:
+
+```http
+GET /api/v1/projects?page=1&pageSize=20
+```
+
+- detailed records;
+- exact `total` and `totalPages`;
+- the domain's existing stable sort.
+
+### Cursor flow
+
+Supplying `limit` or `cursor` selects keyset pagination:
+
+```http
+GET /api/v1/projects?limit=20
+GET /api/v1/projects?limit=20&cursor=<nextCursor>
+```
+
+Cursor mode defaults to:
+
+- compact summaries;
+- no `countDocuments()` call;
+- `hasNextPage` and `nextCursor` metadata;
+- the domain's indexed `updatedAt` and stable-identifier sort.
+
+Use these common controls on every collection:
+
+```text
+view=summary|detail
+includeTotal=true|false
+updatedAfter=<ISO-8601 timestamp>
+limit=1..100
+cursor=<opaque cursor>
+```
+
+Do not combine `cursor` or `limit` with `page` or `pageSize`.
+
+### Bounded resolver
+
+Resolve the context needed for one client, project, task, and workflow stage:
+
+```http
+GET /api/v1/context/resolve?client=zoro&projectId=context-api&taskId=context-api-health-endpoint&stage=verification&maxItems=8
+```
+
+The resolver returns:
+
+- compact profile, project, and task records;
+- the latest applicable instruction-set summaries;
+- global and matching project coding-convention summaries;
+- source references;
+- a stable package revision.
+
+It never returns instruction bodies, coding rules, task acceptance criteria, full project architecture, inbox history, logs, or unrelated project context. Fetch a full record only after selecting it from the resolver response.
+
+### Conditional requests
+
+Successful reads include `ETag` and `Cache-Control: private, must-revalidate`.
+
+```http
+If-None-Match: W/"<previous response hash>"
+```
+
+An unchanged `GET` or `HEAD` returns `304 Not Modified` without a response body.
+
+See [`docs/CONTEXT_READ_MODEL.md`](docs/CONTEXT_READ_MODEL.md) for the complete contract and [`docs/openapi/zoro-context-read-action.yaml`](docs/openapi/zoro-context-read-action.yaml) for the separate read-only Zoro/Architect Action schema.
 
 ## Write behavior
 
@@ -161,9 +243,7 @@ Unexpected failure    500 Internal Server Error
 
 ## GitHub gateway
 
-`/api/v1/github/*` lets an agent read and write GitHub repositories through a GitHub App
-installation. It is authenticated separately from the rest of the API and does not require MongoDB —
-a database outage leaves these routes working.
+`/api/v1/github/*` lets an agent read and write GitHub repositories through a GitHub App installation. It is authenticated separately from the rest of the API and does not require MongoDB — a database outage leaves these routes working.
 
 ### Authentication
 
@@ -173,13 +253,11 @@ Every GitHub route requires:
 Authorization: Bearer <ZORO_GITHUB_API_KEY>
 ```
 
-The token is compared in constant time, is never logged, and is never echoed back. Anything missing,
-malformed, or incorrect returns `401 AUTHENTICATION_REQUIRED` before any GitHub call is made.
+The token is compared in constant time, is never logged, and is never echoed back. Anything missing, malformed, or incorrect returns `401 AUTHENTICATION_REQUIRED` before any GitHub call is made.
 
 ### Configuration
 
-All five variables are required in production and validated at startup. Setting any one of them
-locally causes all of them to be validated, so a typo fails immediately rather than on first request.
+All five variables are required in production and validated at startup. Setting any one of them locally causes all of them to be validated, so a typo fails immediately rather than on first request.
 
 ```text
 GITHUB_APP_ID              positive integer
@@ -230,22 +308,20 @@ curl -s -X PATCH "$BASE/api/v1/github/files" \
 
 ### Direct default-branch writes
 
-> **Warning:** create, replace, and delete work directly on `main`, `master`, and any repository
-> default branch. There is no staging step. A write lands as a real commit immediately.
+> **Warning:** create, replace, and delete work directly on `main`, `master`, and any repository default branch. There is no staging step. A write lands as a real commit immediately.
 
-Branch protection stays authoritative — the gateway never requests a bypass — so a protected branch
-still rejects the write with `403`.
+Branch protection stays authoritative — the gateway never requests a bypass — so a protected branch still rejects the write with `403`.
 
 ### Optimistic concurrency
 
 Destructive operations require the caller to state what they expect to be true:
 
-| Operation             | Required             | On mismatch |
-| --------------------- | -------------------- | ----------- |
-| replace a file        | current blob `sha`   | `409`       |
-| delete a file         | current blob `sha`   | `409`       |
-| fast-forward a branch | `expectedCurrentSha` | `409`       |
-| merge a pull request  | `expectedHeadSha`    | `409`       |
+| Operation | Required | On mismatch |
+| --- | --- | --- |
+| replace a file | current blob `sha` | `409` |
+| delete a file | current blob `sha` | `409` |
+| fast-forward a branch | `expectedCurrentSha` | `409` |
+| merge a pull request | `expectedHeadSha` | `409` |
 
 A `409` is never retried automatically. Re-read the resource, recompute, and resubmit.
 
@@ -258,11 +334,7 @@ A `409` is never retried automatically. Re-read the resource, recompute, and res
 
 ### Not available
 
-Paths at or beneath `.github/workflows` are blocked by server policy for create, update, and delete,
-case-insensitively and after path normalization, so traversal cannot reach them. Also unavailable:
-force pushes, non-fast-forward branch updates, branch-protection bypasses, repository administration,
-repository creation or deletion, collaborator and team management, secrets, variables, deploy keys,
-environments, GitHub Actions administration, binary writes, and arbitrary GitHub API passthrough.
+Paths at or beneath `.github/workflows` are blocked by server policy for create, update, and delete, case-insensitively and after path normalization, so traversal cannot reach them. Also unavailable: force pushes, non-fast-forward branch updates, branch-protection bypasses, repository administration, repository creation or deletion, collaborator and team management, secrets, variables, deploy keys, environments, GitHub Actions administration, binary writes, and arbitrary GitHub API passthrough.
 
 ### GitHub error codes
 
@@ -278,8 +350,10 @@ GITHUB_UNAVAILABLE       502  GitHub unavailable or unexpected upstream response
 
 ## Documentation
 
+- Context read model: [`docs/CONTEXT_READ_MODEL.md`](docs/CONTEXT_READ_MODEL.md)
+- Read-only Context Action schema: [`docs/openapi/zoro-context-read-action.yaml`](docs/openapi/zoro-context-read-action.yaml)
 - GitHub gateway specification: [`docs/GITHUB_GATEWAY_SPEC.md`](docs/GITHUB_GATEWAY_SPEC.md)
-- Custom GPT Action schema: [`docs/openapi/zoro-action.yaml`](docs/openapi/zoro-action.yaml)
+- Custom GPT GitHub/write Action schema: [`docs/openapi/zoro-action.yaml`](docs/openapi/zoro-action.yaml)
 - Deployment and live verification: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 - Product requirements: [`docs/PRD.md`](docs/PRD.md)
 - Technical specification: [`docs/SPEC.md`](docs/SPEC.md)
