@@ -63,6 +63,13 @@ function requestMatchesEtag(req, etag) {
 }
 
 function sendJson(res, statusCode, body) {
+  const method = res.req && res.req.method;
+  const isReadRequest = method === 'GET' || method === 'HEAD';
+
+  if (!isReadRequest) {
+    return res.status(statusCode).json(body);
+  }
+
   const etag = buildEtag(body);
 
   if (typeof res.setHeader === 'function') {
@@ -70,13 +77,7 @@ function sendJson(res, statusCode, body) {
     res.setHeader('Cache-Control', 'private, must-revalidate');
   }
 
-  const method = res.req && res.req.method;
-
-  if (
-    statusCode === 200 &&
-    (method === 'GET' || method === 'HEAD') &&
-    requestMatchesEtag(res.req, etag)
-  ) {
+  if (statusCode === 200 && requestMatchesEtag(res.req, etag)) {
     return res.status(304).end();
   }
 
