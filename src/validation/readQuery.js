@@ -120,7 +120,9 @@ function validateReadQuery(query, fieldSpecs) {
     fail(details);
   }
 
-  const { filters } = validateQuery(filterQuery, fieldSpecs, { pagination: false });
+  const { filters } = validateQuery(filterQuery, fieldSpecs, {
+    pagination: false,
+  });
   const hasCursor = query.cursor !== undefined && query.cursor !== '';
   const hasLimit = query.limit !== undefined && query.limit !== '';
   const hasPage = query.page !== undefined && query.page !== '';
@@ -141,7 +143,12 @@ function validateReadQuery(query, fieldSpecs) {
     PAGINATION_DEFAULTS.pageSize,
     details
   );
-  const limit = parseInteger(query.limit, 'limit', PAGINATION_DEFAULTS.pageSize, details);
+  const limit = parseInteger(
+    query.limit,
+    'limit',
+    PAGINATION_DEFAULTS.pageSize,
+    details
+  );
   const cursor = parseSingleString(query.cursor, 'cursor', details);
 
   if (
@@ -155,18 +162,33 @@ function validateReadQuery(query, fieldSpecs) {
   const view = requestedView || (cursorMode ? 'summary' : 'detail');
 
   if (!READ_VIEWS.includes(view)) {
-    details.push({ field: 'view', message: `Value must be one of: ${READ_VIEWS.join(', ')}.` });
+    details.push({
+      field: 'view',
+      message: `Value must be one of: ${READ_VIEWS.join(', ')}.`,
+    });
   }
 
-  const includeTotal = parseBoolean(query.includeTotal, 'includeTotal', !cursorMode, details);
-  const updatedAfterRaw = parseSingleString(query.updatedAfter, 'updatedAfter', details);
+  const includeTotal = parseBoolean(
+    query.includeTotal,
+    'includeTotal',
+    !cursorMode,
+    details
+  );
+  const updatedAfterRaw = parseSingleString(
+    query.updatedAfter,
+    'updatedAfter',
+    details
+  );
   let updatedAfter = null;
 
   if (updatedAfterRaw !== undefined) {
     const timestamp = Date.parse(updatedAfterRaw);
 
     if (Number.isNaN(timestamp)) {
-      details.push({ field: 'updatedAfter', message: 'Value must be an ISO-8601 date.' });
+      details.push({
+        field: 'updatedAfter',
+        message: 'Value must be an ISO-8601 date.',
+      });
     } else {
       updatedAfter = new Date(timestamp);
     }
