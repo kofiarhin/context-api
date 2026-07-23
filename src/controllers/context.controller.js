@@ -15,21 +15,35 @@ const learningService = require('../services/learning.service');
 const taskService = require('../services/task.service');
 
 /**
- * Builds a collection handler from a service lister and a serializer.
+ * Builds a collection handler from a service lister and explicit serializers.
  *
- * Controllers stay free of query construction and business rules; they only
- * translate validated input into a service call and a response envelope.
+ * Offset reads preserve the original detail representation unless `view=summary`
+ * is requested. Cursor reads default to summary projections and omit total counts
+ * unless `includeTotal=true` is supplied.
  */
-function createListHandler(list, serializer) {
+function createListHandler(list, detailSerializer, summarySerializer = detailSerializer) {
   return asyncHandler(async (req, res) => {
     const { filters, pagination } = req.validated;
-    const { items, total } = await list(filters, pagination);
+    const result = await list(filters, pagination);
+    const serializer = pagination.view === 'summary' ? summarySerializer : detailSerializer;
+    const mode = result.mode || pagination.mode;
+    const responsePagination =
+      mode === 'cursor'
+        ? {
+            mode,
+            limit: result.limit || pagination.limit,
+            hasNextPage: Boolean(result.hasNextPage),
+            nextCursor: result.nextCursor || null,
+            total: result.total,
+          }
+        : {
+            mode: 'offset',
+            total: result.total,
+            page: result.page || pagination.page,
+            pageSize: result.pageSize || pagination.pageSize,
+          };
 
-    sendCollection(res, items.map(serializer), {
-      total,
-      page: pagination.page,
-      pageSize: pagination.pageSize,
-    });
+    sendCollection(res, result.items.map(serializer), responsePagination);
   });
 }
 
@@ -61,7 +75,8 @@ module.exports = {
 
   listCodingConventions: createListHandler(
     codingConventionService.listCodingConventions,
-    serializers.serializeCodingConvention
+    serializers.serializeCodingConvention,
+    serializers.serializeCodingConventionSummary
   ),
   getCodingConvention: createResourceHandler(
     'key',
@@ -70,7 +85,11 @@ module.exports = {
     'Coding convention'
   ),
 
-  listProjects: createListHandler(projectService.listProjects, serializers.serializeProject),
+  listProjects: createListHandler(
+    projectService.listProjects,
+    serializers.serializeProject,
+    serializers.serializeProjectSummary
+  ),
   getProject: createResourceHandler(
     'projectId',
     projectService.getProjectById,
@@ -80,7 +99,8 @@ module.exports = {
 
   listInstructionSets: createListHandler(
     instructionSetService.listInstructionSets,
-    serializers.serializeInstructionSet
+    serializers.serializeInstructionSet,
+    serializers.serializeInstructionSetSummary
   ),
   getInstructionSet: createResourceHandler(
     'key',
@@ -91,7 +111,8 @@ module.exports = {
 
   listIdeasHubSections: createListHandler(
     ideasHubService.listIdeasHubSections,
-    serializers.serializeIdeasHubContext
+    serializers.serializeIdeasHubContext,
+    serializers.serializeIdeasHubContextSummary
   ),
   getIdeasHubSection: createResourceHandler(
     'section',
@@ -102,7 +123,8 @@ module.exports = {
 
   listGlossaryEntries: createListHandler(
     glossaryService.listGlossaryEntries,
-    serializers.serializeGlossaryEntry
+    serializers.serializeGlossaryEntry,
+    serializers.serializeGlossaryEntrySummary
   ),
   getGlossaryEntry: createResourceHandler(
     'term',
@@ -111,7 +133,11 @@ module.exports = {
     'Glossary term'
   ),
 
-  listLearnings: createListHandler(learningService.listLearnings, serializers.serializeLearning),
+  listLearnings: createListHandler(
+    learningService.listLearnings,
+    serializers.serializeLearning,
+    serializers.serializeLearningSummary
+  ),
   getLearning: createResourceHandler(
     'learningId',
     learningService.getLearningById,
@@ -119,6 +145,10 @@ module.exports = {
     'Learning'
   ),
 
-  listTasks: createListHandler(taskService.listTasks, serializers.serializeTask),
+  listTasks: createListHandler(
+    taskService.listTasks,
+    serializers.serializeTask,
+    serializers.serializeTaskSummary
+  ),
   getTask: createResourceHandler('taskId', taskService.getTaskById, serializers.serializeTask, 'Task'),
 };
