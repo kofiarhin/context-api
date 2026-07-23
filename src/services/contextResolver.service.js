@@ -85,10 +85,16 @@ function buildRevision(parts) {
     .map((part) => ({
       id: part.key || part.projectId || part.taskId,
       version: part.version || null,
-      updatedAt: part.updatedAt instanceof Date ? part.updatedAt.toISOString() : part.updatedAt || null,
+      updatedAt:
+        part.updatedAt instanceof Date
+          ? part.updatedAt.toISOString()
+          : part.updatedAt || null,
     }));
 
-  return crypto.createHash('sha256').update(JSON.stringify(fingerprint)).digest('base64url');
+  return crypto
+    .createHash('sha256')
+    .update(JSON.stringify(fingerprint))
+    .digest('base64url');
 }
 
 async function resolveContext({
@@ -100,15 +106,10 @@ async function resolveContext({
   updatedAfter = null,
 }) {
   const boundedMaxItems = clampMaxItems(maxItems);
-  const [profile, project, task] = await Promise.all([
+  const [profile, task] = await Promise.all([
     profileService.getActiveProfile(),
-    projectId ? projectService.getProjectById(projectId) : Promise.resolve(null),
     taskId ? taskService.getTaskById(taskId) : Promise.resolve(null),
   ]);
-
-  if (projectId && !project) {
-    throw new ResourceNotFoundError(`Project "${projectId}" was not found.`);
-  }
 
   if (taskId && !task) {
     throw new ResourceNotFoundError(`Task "${taskId}" was not found.`);
@@ -123,6 +124,15 @@ async function resolveContext({
     ]);
   }
 
+  const effectiveProjectId = projectId || (task ? task.projectId : null);
+  const project = effectiveProjectId
+    ? await projectService.getProjectById(effectiveProjectId)
+    : null;
+
+  if (effectiveProjectId && !project) {
+    throw new ResourceNotFoundError(`Project "${effectiveProjectId}" was not found.`);
+  }
+
   const instructionFilter = addUpdatedAfter(
     {
       status: { $in: PUBLISHED_STATUSES },
@@ -132,8 +142,13 @@ async function resolveContext({
     updatedAfter
   );
 
-  const conventionScope = projectId
-    ? { $or: [{ scope: 'global' }, { scope: 'project', projectId }] }
+  const conventionScope = effectiveProjectId
+    ? {
+        $or: [
+          { scope: 'global' },
+          { scope: 'project', projectId: effectiveProjectId },
+        ],
+      }
     : { scope: 'global' };
   const conventionFilter = addUpdatedAfter(
     { status: { $in: PUBLISHED_STATUSES }, ...conventionScope },
@@ -153,7 +168,10 @@ async function resolveContext({
       .lean(),
   ]);
 
-  const instructionSets = latestVersionPerKey(instructionCandidates, boundedMaxItems);
+  const instructionSets = latestVersionPerKey(
+    instructionCandidates,
+    boundedMaxItems
+  );
   const revision = buildRevision([
     profile,
     project,
@@ -171,7 +189,7 @@ async function resolveContext({
     revision,
     resolvedFor: {
       client,
-      projectId,
+      projectId: effectiveProjectId,
       taskId,
       workflowStage,
       updatedAfter: updatedAfter ? updatedAfter.toISOString() : null,
