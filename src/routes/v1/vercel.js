@@ -2,7 +2,11 @@
 
 const { Router } = require('express');
 const controller = require('../../controllers/vercel.controller');
-const { validateVercelQuery, validateVercelBody, validateVercelParams } = require('../../middleware/validateVercel');
+const {
+  validateVercelQuery,
+  validateVercelBody,
+  validateVercelParams,
+} = require('../../middleware/validateVercel');
 const { RouteNotFoundError } = require('../../utils/errors');
 
 const router = Router();
@@ -26,6 +30,7 @@ router.get('/deployments/:deployment', validateVercelParams, controller.getDeplo
 router.patch('/deployments/:deployment/cancel', validateVercelParams, controller.cancelDeployment);
 router.delete('/deployments/:deployment', validateVercelParams, validateVercelBody, controller.deleteDeployment);
 router.get('/deployments/:deployment/events', validateVercelParams, validateVercelQuery, controller.getDeploymentEvents);
+router.get('/deployments/:deployment/logs', validateVercelParams, validateVercelQuery, controller.getDeploymentLogs);
 router.get('/deployments/:deployment/files', validateVercelParams, controller.listDeploymentFiles);
 router.post('/deployments/:deployment/promote', validateVercelParams, validateVercelBody, controller.promoteDeployment);
 
