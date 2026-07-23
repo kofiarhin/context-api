@@ -11,6 +11,8 @@ npm run lint                # eslint .
 npm run format:check        # prettier --check .
 npm run seed                # idempotent upsert of src/seeds/data
 npm run seed:reset          # destructive: deleteMany on every seeded collection first
+npm run verify              # test + lint + format:check + verify:github-gateway (the full gate)
+npm run verify:github-gateway   # static release check of the GitHub gateway spec/schema/prod URL
 ```
 
 Single test file / single case:
@@ -106,6 +108,38 @@ comparison in `isUnchanged`, not Mongoose dirty-checking, which is unreliable fo
 approved/active > draft, then priority, version, `updatedAt`. `resolve()` returns the winner *and*
 what it outranked so callers can surface conflicts rather than discard them.
 
+## The GitHub gateway (`/api/v1/github`)
+
+A second, architecturally separate subsystem lets an external agent ("Zoro") drive real repositories:
+list repos/contents/branches, create/update branches, create/update/delete files, and open/get/update/
+merge pull requests. Routes live in `src/routes/v1/github.js`; the layering mirrors the context side
+(route → `validateGithub` → `github.controller` → `github.service` → Octokit → `github.serializer`).
+
+It is deliberately unlike the public context API in four ways, and these differences are load-bearing:
+
+- **Mounted first, with its own parser and its own body limit.** `app.js` mounts the GitHub router
+  ahead of the context router with a `512kb` JSON limit (vs. `10kb`) because file writes carry
+  whole-file content. It **skips `requireDatabase`** — these routes talk to GitHub, not Mongo — so a
+  DB outage must not take them down (`tests/integration/githubDatabaseIndependence.test.js`).
+- **Authenticated, unlike the rest of the MVP.** `requireGithubActionAuth` demands a bearer token
+  matching `ZORO_GITHUB_API_KEY` via constant-time comparison; it fails *closed* if the key is
+  unconfigured. The token is never logged, attached to `req`, or echoed. `requireGithubRepositoryAccess`
+  optionally narrows scope to `GITHUB_REPOSITORY_ALLOWLIST` (owner/repo, comma-separated).
+- **Server-side write policy in `src/services/githubPolicy.js`.** Writes at or beneath
+  `.github/workflows` are refused (editing CI == arbitrary code execution). Content is UTF-8 text only
+  (null bytes / lone surrogates ⇒ `415`). Paths are normalized and reject traversal segments; refs are
+  validated against Git's own rules. These are policy decisions, not just input validation — keep them.
+- **App-installation auth, ESM Octokit.** `githubClient.js` loads the ESM `octokit` via a cached
+  dynamic `import()` from CommonJS, builds one installation-authenticated client, and lets Octokit own
+  the short-lived token. `github.service.js` funnels every upstream call through `call()` so a raw
+  Octokit error never escapes — `githubErrors.js` translates it into an `AppError` subclass.
+
+Config is validated in `src/config/env.js` (`loadGithubConfig`): all five `GITHUB_*`/`ZORO_*` vars are
+required in production and fail startup if missing; locally the gateway is optional, but supplying *any*
+one variable makes the whole set required so a typo surfaces immediately. `npm run verify:github-gateway`
+is a static release check that the OpenAPI schema (`docs/openapi/zoro-action.yaml`), spec, plan, and
+production URL stay in sync — run it (or `npm run verify`) before shipping gateway changes.
+
 ## Security posture
 
 This MVP is intentionally public and unauthenticated — every caller can read and write. Do not store
@@ -117,4 +151,6 @@ enabled.
 ## Reference
 
 `docs/SPEC.md` is the authoritative technical spec and is cited by section number in code comments.
-See also `docs/PRD.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/DEPLOYMENT.md`.
+See also `docs/PRD.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/DEPLOYMENT.md`. For the GitHub gateway:
+`docs/GITHUB_GATEWAY_SPEC.md`, `docs/GITHUB_GATEWAY_IMPLEMENTATION_PLAN.md`, and the agent-facing
+`docs/openapi/zoro-action.yaml`.
