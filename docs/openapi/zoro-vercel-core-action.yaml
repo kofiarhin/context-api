@@ -1,0 +1,328 @@
+openapi: 3.1.0
+info:
+  title: Zoro Vercel Gateway — Core
+  version: 1.0.0
+  description: >-
+    Governed Vercel account, project, and deployment operations through the Context API.
+    Deployments are created as Preview by default. Production-affecting operations require an
+    explicit approval payload and destructive operations require an exact confirmation payload.
+    Environment-variable values are never returned by any operation.
+servers:
+  - url: https://context-api-3b9dfadf403e.herokuapp.com
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/vercel/user:
+    get:
+      operationId: getVercelUser
+      summary: Get the authenticated Vercel user
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+  /api/v1/vercel/teams:
+    get:
+      operationId: listVercelTeams
+      summary: List allowed Vercel teams
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+  /api/v1/vercel/teams/{teamId}:
+    get:
+      operationId: getVercelTeam
+      summary: Get an allowed Vercel team
+      parameters:
+        - $ref: '#/components/parameters/TeamId'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+  /api/v1/vercel/projects:
+    get:
+      operationId: listVercelProjects
+      summary: List Vercel projects
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+    post:
+      operationId: createVercelProject
+      summary: Create an allowlisted Vercel project
+      requestBody:
+        $ref: '#/components/requestBodies/ObjectBody'
+      responses:
+        '201':
+          $ref: '#/components/responses/Success'
+  /api/v1/vercel/projects/{project}:
+    get:
+      operationId: getVercelProject
+      summary: Get a Vercel project
+      parameters:
+        - $ref: '#/components/parameters/Project'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+    patch:
+      operationId: updateVercelProject
+      summary: Update a Vercel project; production-affecting settings require approval
+      parameters:
+        - $ref: '#/components/parameters/Project'
+      requestBody:
+        $ref: '#/components/requestBodies/ObjectBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+    delete:
+      operationId: deleteVercelProject
+      summary: Delete a project only with exact destructive confirmation
+      parameters:
+        - $ref: '#/components/parameters/Project'
+      requestBody:
+        $ref: '#/components/requestBodies/DestructiveBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+  /api/v1/vercel/projects/{project}/pause:
+    post:
+      operationId: pauseVercelProject
+      summary: Pause a project with production approval
+      parameters:
+        - $ref: '#/components/parameters/Project'
+      requestBody:
+        $ref: '#/components/requestBodies/ProductionBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+  /api/v1/vercel/projects/{project}/unpause:
+    post:
+      operationId: unpauseVercelProject
+      summary: Unpause a project with production approval
+      parameters:
+        - $ref: '#/components/parameters/Project'
+      requestBody:
+        $ref: '#/components/requestBodies/ProductionBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+  /api/v1/vercel/projects/{project}/rollback:
+    post:
+      operationId: rollbackVercelProject
+      summary: Roll back production to a named deployment with production approval
+      parameters:
+        - $ref: '#/components/parameters/Project'
+      requestBody:
+        $ref: '#/components/requestBodies/ProductionBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+  /api/v1/vercel/deployments:
+    get:
+      operationId: listVercelDeployments
+      summary: List Vercel deployments
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+    post:
+      operationId: createVercelDeployment
+      summary: Create a Preview deployment by default; Production requires approval
+      requestBody:
+        $ref: '#/components/requestBodies/ObjectBody'
+      responses:
+        '201':
+          $ref: '#/components/responses/Success'
+  /api/v1/vercel/deployments/{deployment}:
+    get:
+      operationId: getVercelDeployment
+      summary: Get a deployment
+      parameters:
+        - $ref: '#/components/parameters/Deployment'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+    delete:
+      operationId: deleteVercelDeployment
+      summary: Delete a deployment with exact destructive confirmation
+      parameters:
+        - $ref: '#/components/parameters/Deployment'
+      requestBody:
+        $ref: '#/components/requestBodies/DestructiveBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+  /api/v1/vercel/deployments/{deployment}/cancel:
+    patch:
+      operationId: cancelVercelDeployment
+      summary: Cancel a non-production deployment
+      parameters:
+        - $ref: '#/components/parameters/Deployment'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+  /api/v1/vercel/deployments/{deployment}/events:
+    get:
+      operationId: getVercelDeploymentEvents
+      summary: Get bounded deployment events
+      parameters:
+        - $ref: '#/components/parameters/Deployment'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+  /api/v1/vercel/deployments/{deployment}/logs:
+    get:
+      operationId: getVercelDeploymentLogs
+      summary: Get bounded, redacted deployment logs
+      parameters:
+        - $ref: '#/components/parameters/Deployment'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Since'
+        - $ref: '#/components/parameters/Until'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+  /api/v1/vercel/deployments/{deployment}/files:
+    get:
+      operationId: listVercelDeploymentFiles
+      summary: List deployment file metadata
+      parameters:
+        - $ref: '#/components/parameters/Deployment'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+  /api/v1/vercel/deployments/{deployment}/promote:
+    post:
+      operationId: promoteVercelDeployment
+      summary: Promote a deployment to Production with explicit approval
+      parameters:
+        - $ref: '#/components/parameters/Deployment'
+      requestBody:
+        $ref: '#/components/requestBodies/ProductionBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Vercel Gateway bearer token supplied as ZORO_VERCEL_API_KEY.
+  parameters:
+    TeamId:
+      name: teamId
+      in: path
+      required: true
+      schema:
+        type: string
+    Project:
+      name: project
+      in: path
+      required: true
+      schema:
+        type: string
+    Deployment:
+      name: deployment
+      in: path
+      required: true
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+    Since:
+      name: since
+      in: query
+      required: false
+      schema:
+        type: integer
+    Until:
+      name: until
+      in: query
+      required: false
+      schema:
+        type: integer
+  schemas:
+    Approval:
+      type: object
+      additionalProperties: false
+      required: [confirmed, scope, reason]
+      properties:
+        confirmed:
+          type: boolean
+          const: true
+        scope:
+          type: string
+          const: production
+        reason:
+          type: string
+          minLength: 8
+        requestReference:
+          type: string
+    Confirmation:
+      type: object
+      additionalProperties: false
+      required: [confirmed, resourceType, resourceId, reason]
+      properties:
+        confirmed:
+          type: boolean
+          const: true
+        resourceType:
+          type: string
+        resourceId:
+          type: string
+        expectedName:
+          type: string
+        reason:
+          type: string
+          minLength: 8
+    GenericObject:
+      type: object
+      additionalProperties: true
+  requestBodies:
+    ObjectBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GenericObject'
+    ProductionBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/GenericObject'
+              - type: object
+                required: [approval]
+                properties:
+                  approval:
+                    $ref: '#/components/schemas/Approval'
+    DestructiveBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [confirmation]
+            properties:
+              confirmation:
+                $ref: '#/components/schemas/Confirmation'
+  responses:
+    Success:
+      description: Normalized Context API response
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: {}
+              meta:
+                type: object

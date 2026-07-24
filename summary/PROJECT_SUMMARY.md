@@ -2,26 +2,37 @@
 
 ## Last Task
 
-Fixed `GET /api/v1/vercel/user` returning an empty object by unwrapping the upstream `/v2/user`
-envelope, and corrected the earlier misdiagnosis of the gateway 401.
+Split the single Vercel Action schema into two GPT Builder-compatible schemas, because GPT Builder
+rejects any Action schema declaring more than 30 operations.
 
 ## Progress
 
-- Corrected the previous entry: the 401 was **not** a local `ZORO_VERCEL_API_KEY` mismatch. The local
-  key was valid; `ZORO_VERCEL_API_KEY` was present but set to an **empty string on Heroku**. Syncing
-  the local value to Heroku resolved it. Unauthenticated, valid-bearer, and wrong-bearer checks
-  against the deployed app now return 401/200/401 as expected.
-- Fixed `serializer.user`: Vercel returns `{ user: { ... } }`, but the serializer read `id`/`username`
-  /`name`/`email` from the top level, so every field was `undefined` and `compact()` stripped them,
-  yielding `{}`. It now unwraps the envelope and still accepts an already-unwrapped user object.
-- Added `tests/unit/vercelSerializer.test.js` covering the real envelope shape, allowlisted output,
-  rejection of unrelated upstream fields, and the service-to-serializer seam via a stubbed client.
-- Pre-existing issues left untouched: lint fails in unrelated Vercel service files, repo-wide format
-  check fails across many existing files, and Vercel release validation reports a missing OpenAPI
-  operation ID.
+- Replaced `docs/openapi/zoro-vercel-action.yaml` (36 operations, rejected by GPT Builder) with
+  `zoro-vercel-core-action.yaml` (20 operations: user, teams, projects, deployments, events, logs,
+  files, promotion, rollback) and `zoro-vercel-config-action.yaml` (17 operations: environment-variable
+  metadata, project domains, aliases, domain config, DNS). The two files are disjoint and together
+  cover all 37 implemented routes; no runtime route changed.
+- The old schema was also missing `getVercelDeploymentLogs`, which its own validator required, so
+  `npm run verify:vercel-gateway` failed on `main`. The core schema now exposes
+  `GET /deployments/{deployment}/logs` and the check passes.
+- Rewrote `scripts/validate-vercel-gateway-release.js` around a route-keyed contract table. Keying on
+  `METHOD path` rather than operation ID means renaming an operation cannot drop it out of its
+  approval or confirmation requirement. It validates: per-file operation budget, ID uniqueness within
+  and across files, route/schema parity in both directions, identical `ZORO_VERCEL_API_KEY` bearer
+  scheme, production URL, approval/confirmation payloads, and absence of any decrypted-secret read.
+  It now exports its helpers and accepts injected file contents so tests can prove each rule fails.
+- Added `tests/unit/vercelActionSchemas.test.js` (32 cases), including negative cases for every
+  validation rule.
+- Pre-existing failures left untouched: `npm run lint` reports 2 errors in `vercel.service.js` and
+  `vercelRedaction.js`; `npm run format:check` fails across ~99 files that predate this work. Both
+  make the aggregate `npm run verify` red independently of this change.
 
 ## Files
 
-- `src/serializers/vercel.serializer.js`
-- `tests/unit/vercelSerializer.test.js`
-- `docs/DEPLOYMENT.md`
+- `docs/openapi/zoro-vercel-core-action.yaml`
+- `docs/openapi/zoro-vercel-config-action.yaml`
+- `scripts/validate-vercel-gateway-release.js`
+- `tests/unit/vercelActionSchemas.test.js`
+- `docs/VERCEL_GATEWAY_SPEC.md`
+- `docs/VERCEL_GATEWAY_IMPLEMENTATION_PLAN.md`
+- `README.md`

@@ -354,6 +354,8 @@ GITHUB_UNAVAILABLE       502  GitHub unavailable or unexpected upstream response
 - Read-only Context Action schema: [`docs/openapi/zoro-context-read-action.yaml`](docs/openapi/zoro-context-read-action.yaml)
 - GitHub gateway specification: [`docs/GITHUB_GATEWAY_SPEC.md`](docs/GITHUB_GATEWAY_SPEC.md)
 - Custom GPT GitHub/write Action schema: [`docs/openapi/zoro-action.yaml`](docs/openapi/zoro-action.yaml)
+- Vercel gateway specification: [`docs/VERCEL_GATEWAY_SPEC.md`](docs/VERCEL_GATEWAY_SPEC.md)
+- Vercel Action schemas (split to stay under the 30-operation GPT Builder limit): [`docs/openapi/zoro-vercel-core-action.yaml`](docs/openapi/zoro-vercel-core-action.yaml) and [`docs/openapi/zoro-vercel-config-action.yaml`](docs/openapi/zoro-vercel-config-action.yaml)
 - Deployment and live verification: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 - Product requirements: [`docs/PRD.md`](docs/PRD.md)
 - Technical specification: [`docs/SPEC.md`](docs/SPEC.md)

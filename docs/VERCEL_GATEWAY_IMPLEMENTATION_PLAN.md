@@ -238,13 +238,14 @@ Vercel tests must use injected mocked clients and deterministic fixtures. Automa
 
 `docs/openapi/zoro-action.yaml` currently declares 27 operations: 15 context operations and 12 GitHub operations. `scripts/validate-github-gateway-release.js` asserts the operation count, unique operation IDs, production server URL, required GitHub operations, and bearer authentication.
 
-The approved Vercel specification selects a dedicated schema:
+The approved Vercel specification selects a dedicated schema. GPT Builder rejects any Action schema declaring more than 30 operations, and the implemented Vercel surface is larger, so the dedicated contract is published as two disjoint Builder-facing files:
 
 ```text
-docs/openapi/zoro-vercel-action.yaml
+docs/openapi/zoro-vercel-core-action.yaml
+docs/openapi/zoro-vercel-config-action.yaml
 ```
 
-This plan preserves that decision.
+This plan preserves that decision, including the separate `ZORO_VERCEL_API_KEY` authentication boundary, which both files share.
 
 ## 4. Target architecture and request flow
 
@@ -697,8 +698,9 @@ Test files may be combined when that improves maintainability, but every respons
 
 | File | Responsibility |
 | --- | --- |
-| `docs/openapi/zoro-vercel-action.yaml` | Canonical Vercel Action contract containing only implemented endpoints and a Vercel-specific bearer scheme. |
-| `scripts/validate-vercel-gateway-release.js` | Validate spec/plan/schema/route alignment, operation IDs, security, production URL, approval schemas, prohibited operations, and no decrypted-value endpoint. |
+| `docs/openapi/zoro-vercel-core-action.yaml` | Builder-facing Vercel contract for user, team, project, and deployment operations. |
+| `docs/openapi/zoro-vercel-config-action.yaml` | Builder-facing Vercel contract for environment-variable metadata, project domains, aliases, domain configuration, and DNS records. |
+| `scripts/validate-vercel-gateway-release.js` | Validate spec/plan/schema/route alignment, per-schema operation budget, operation IDs within and across schemas, security, production URL, approval schemas, prohibited operations, and no decrypted-value endpoint. |
 | `docs/VERCEL_GATEWAY_RELEASE_CHECKLIST.md` | Optional but recommended controlled verification, deployment, Builder installation, Preview mutation, cleanup, rollback, and evidence checklist. |
 
 ### 8.4 Existing files expected to change
@@ -1087,16 +1089,16 @@ npm run verify
 
 **Tasks:**
 
-1. Create `docs/openapi/zoro-vercel-action.yaml` with a Vercel-specific bearer scheme referring to `ZORO_VERCEL_API_KEY`.
-2. Include only implemented endpoints.
+1. Create `docs/openapi/zoro-vercel-core-action.yaml` and `docs/openapi/zoro-vercel-config-action.yaml` with an identical Vercel-specific bearer scheme referring to `ZORO_VERCEL_API_KEY`.
+2. Include only implemented endpoints, each in exactly one of the two files.
 3. Preserve Preview defaults and approval/confirmation objects in schemas and descriptions.
 4. State that environment values must never be retrieved or repeated.
-5. Use stable unique operation IDs.
+5. Use stable unique operation IDs that are never reused across the two files.
 6. Add normalized response/error schemas and production server URL.
 7. Add `scripts/validate-vercel-gateway-release.js`.
 8. Validate route/schema parity and prohibited-operation absence.
 9. Revalidate current GPT Builder limits and parsing behavior.
-10. If one full schema exceeds current Builder constraints, stop for approval before splitting the dedicated Vercel contract into multiple Builder-facing schemas.
+10. Keep each file below the 30-operation GPT Builder ceiling; the split into two Builder-facing schemas was approved after a single combined schema was rejected for exceeding it.
 
 **Verification:**
 
@@ -1235,12 +1237,13 @@ Security tests must prove:
 
 `verify:vercel-gateway` should confirm:
 
-- specification, plan, route, and schema files exist;
+- specification, plan, route, and both schema files exist;
 - production server URL is correct;
-- operation IDs are unique;
+- each schema declares at most 30 operations;
+- operation IDs are unique within a schema and never reused across the two schemas;
 - every schema operation maps to an implemented route;
-- every exposed Vercel route appears in the schema;
-- bearer authentication applies to every operation;
+- every exposed Vercel route appears in exactly one schema;
+- both schemas declare the same `ZORO_VERCEL_API_KEY` bearer scheme and apply it to every operation;
 - Preview is the deployment default;
 - production/destructive operations require approval/confirmation schemas;
 - no decrypted environment-value operation exists;
@@ -1293,10 +1296,11 @@ The complete proposed Vercel route surface in this plan contains approximately 4
 
 ### 11.2 Approved recommendation
 
-Use a dedicated canonical schema:
+Use a dedicated canonical contract, published as two Builder-facing files so that neither exceeds the 30-operation GPT Builder ceiling:
 
 ```text
-docs/openapi/zoro-vercel-action.yaml
+docs/openapi/zoro-vercel-core-action.yaml
+docs/openapi/zoro-vercel-config-action.yaml
 ```
 
 Benefits:

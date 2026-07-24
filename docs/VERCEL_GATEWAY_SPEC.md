@@ -630,32 +630,38 @@ Requirements:
 
 ## 21. OpenAPI and Custom GPT Action design
 
-The Vercel Gateway should use a dedicated maintained schema:
+The Vercel Gateway uses dedicated maintained schemas:
 
 ```text
-docs/openapi/zoro-vercel-action.yaml
+docs/openapi/zoro-vercel-core-action.yaml
+docs/openapi/zoro-vercel-config-action.yaml
 ```
 
 This avoids overloading the existing Context/GitHub Action schema and creates a separate authentication boundary.
+
+The Vercel contract is published as two files because a GPT Builder Action schema may declare at most 30 operations and the implemented Vercel surface is larger than that. The split is by capability, not by risk level: the core schema carries user, team, project, and deployment operations, and the configuration schema carries environment-variable metadata, project domains, aliases, domain configuration, and DNS records. The two files are disjoint — no operation ID or route appears in both — and together they cover every implemented route.
+
+Both files declare the same `ZORO_VERCEL_API_KEY` bearer scheme, so they install as two Actions sharing one credential.
 
 Recommended Zoro Action organization:
 
 ```text
 Action 1 — Context records
 Action 2 — GitHub Gateway
-Action 3 — Vercel Gateway
+Action 3 — Vercel Gateway (core)
+Action 4 — Vercel Gateway (configuration)
 ```
 
 All actions may use the same Context API host but should use focused schemas and separate bearer credentials where supported.
 
-The Vercel Action schema must:
+Each Vercel Action schema must:
 
 - describe approval requirements in operation summaries and request schemas;
 - distinguish Preview, Production, and destructive operations;
 - state that secret values must never be retrieved or repeated;
 - expose only implemented endpoints;
-- use unique, stable operation IDs;
-- remain within current Custom GPT Action limits;
+- use unique, stable operation IDs that are not reused by the other Vercel schema;
+- remain within current Custom GPT Action limits, currently at most 30 operations per schema;
 - include normalized success and error schemas;
 - be validated by a repository release script;
 - be manually installed and smoke-tested in GPT Builder after deployment.
@@ -688,7 +694,8 @@ src/config/env.js
 src/middleware/errorHandler.js
 src/utils/errors.js
 docs/DEPLOYMENT.md
-docs/openapi/zoro-vercel-action.yaml
+docs/openapi/zoro-vercel-core-action.yaml
+docs/openapi/zoro-vercel-config-action.yaml
 scripts/validate-vercel-gateway-release.js
 ```
 
@@ -754,9 +761,10 @@ The validator must confirm:
 
 - required specification and OpenAPI files exist;
 - production server URL is correct;
-- operation IDs are unique;
-- every documented exposed route is implemented;
-- all write operations declare bearer authentication;
+- each schema declares at most 30 operations;
+- operation IDs are unique within a schema and are never reused across the two schemas;
+- every documented exposed route is implemented, and every implemented route is documented exactly once;
+- both schemas declare the same `ZORO_VERCEL_API_KEY` bearer scheme, and all write operations declare bearer authentication;
 - production/destructive schemas require approval or confirmation objects;
 - no decrypted environment-variable operation exists;
 - no account, billing, team-member, token, or certificate-private-key administration operation exists;
