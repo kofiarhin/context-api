@@ -1,6 +1,7 @@
 'use strict';
 
 const { getHerokuConfig } = require('../../config/heroku');
+const { AppError } = require('../../utils/errors');
 const { translateHerokuError } = require('./herokuErrors');
 
 const BASE_URL = 'https://api.heroku.com';
@@ -19,11 +20,7 @@ function buildQuery(query = {}) {
 }
 
 function operationalError(code, message, statusCode) {
-  const error = new Error(message);
-  error.code = code;
-  error.statusCode = statusCode;
-  error.isOperational = true;
-  return error;
+  return new AppError(code, message, statusCode);
 }
 
 async function request(method, path, options = {}) {
@@ -44,14 +41,19 @@ async function request(method, path, options = {}) {
 
   let response;
   try {
-    response = await (options.fetchImpl || fetch)(`${BASE_URL}${path}${buildQuery(options.query)}`, {
-      method,
-      headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
-      signal: controller.signal,
-    });
+    response = await (options.fetchImpl || fetch)(
+      `${BASE_URL}${path}${buildQuery(options.query)}`,
+      {
+        method,
+        headers,
+        body: options.body === undefined ? undefined : JSON.stringify(options.body),
+        signal: controller.signal,
+      }
+    );
   } catch (error) {
-    if (error.name === 'AbortError') throw operationalError('HEROKU_TIMEOUT', 'Heroku request timed out.', 504);
+    if (error.name === 'AbortError') {
+      throw operationalError('HEROKU_TIMEOUT', 'Heroku request timed out.', 504);
+    }
     throw operationalError('HEROKU_UNAVAILABLE', 'Heroku is currently unavailable.', 502);
   } finally {
     clearTimeout(timeout);
@@ -92,7 +94,10 @@ async function fetchLogText(urlValue, options = {}) {
   } catch {
     throw operationalError('HEROKU_INVALID_LOG_URL', 'Heroku returned an invalid log URL.', 502);
   }
-  if (url.protocol !== 'https:' || !(url.hostname === 'heroku.com' || url.hostname.endsWith('.heroku.com'))) {
+  if (
+    url.protocol !== 'https:' ||
+    !(url.hostname === 'heroku.com' || url.hostname.endsWith('.heroku.com'))
+  ) {
     throw operationalError('HEROKU_INVALID_LOG_URL', 'Heroku returned an untrusted log URL.', 502);
   }
 
@@ -106,18 +111,33 @@ async function fetchLogText(urlValue, options = {}) {
       signal: controller.signal,
       headers: { 'User-Agent': 'context-api-heroku-gateway/1.0' },
     });
-    if (!response.ok) throw operationalError('HEROKU_LOG_UNAVAILABLE', 'Heroku logs are currently unavailable.', 502);
+    if (!response.ok) {
+      throw operationalError('HEROKU_LOG_UNAVAILABLE', 'Heroku logs are currently unavailable.', 502);
+    }
     const text = await response.text();
+    const truncated = Buffer.byteLength(text, 'utf8') > MAX_LOG_BYTES;
     return {
-      text: Buffer.byteLength(text, 'utf8') > MAX_LOG_BYTES ? Buffer.from(text).subarray(0, MAX_LOG_BYTES).toString('utf8') : text,
-      truncated: Buffer.byteLength(text, 'utf8') > MAX_LOG_BYTES,
+      text: truncated
+        ? Buffer.from(text).subarray(0, MAX_LOG_BYTES).toString('utf8')
+        : text,
+      truncated,
     };
   } catch (error) {
-    if (error.name === 'AbortError') throw operationalError('HEROKU_TIMEOUT', 'Heroku log retrieval timed out.', 504);
+    if (error.name === 'AbortError') {
+      throw operationalError('HEROKU_TIMEOUT', 'Heroku log retrieval timed out.', 504);
+    }
     throw error;
   } finally {
     clearTimeout(timeout);
   }
 }
 
-module.exports = { request, fetchLogText, buildQuery, operationalError, BASE_URL, ACCEPT, MAX_LOG_BYTES };
+module.exports = {
+  request,
+  fetchLogText,
+  buildQuery,
+  operationalError,
+  BASE_URL,
+  ACCEPT,
+  MAX_LOG_BYTES,
+};
