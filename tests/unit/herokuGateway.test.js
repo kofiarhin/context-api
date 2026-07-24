@@ -3,7 +3,7 @@
 const { getHerokuConfig } = require('../../src/config/heroku');
 const { secretsMatch } = require('../../src/middleware/requireHerokuActionAuth');
 const policy = require('../../src/services/heroku/herokuPolicy');
-const catalogue = require('../../src/services/heroku/herokuCatalogue');
+const routes = require('../../src/services/heroku/herokuRoutes');
 const service = require('../../src/services/heroku/heroku.service');
 
 const source = {
@@ -15,6 +15,7 @@ const source = {
   HEROKU_TEAM_ALLOWLIST: 'kofi-team',
   HEROKU_PIPELINE_ALLOWLIST: 'main-pipeline',
   HEROKU_SPACE_ALLOWLIST: 'private-space',
+  HEROKU_DOMAIN_SUFFIX_ALLOWLIST: '.example.com',
   HEROKU_DYNO_SIZE_ALLOWLIST: 'basic,standard-1x',
   HEROKU_ADDON_PLAN_ALLOWLIST: 'heroku-redis:mini',
   HEROKU_MUTATIONS_ENABLED: 'true',
@@ -31,7 +32,7 @@ const approval = {
 };
 
 function descriptor(operationId) {
-  return catalogue.find((route) => route.operationId === operationId);
+  return routes.find((route) => route.operationId === operationId);
 }
 
 describe('Heroku gateway', () => {
@@ -49,30 +50,37 @@ describe('Heroku gateway', () => {
   });
 
   test('defines a full, unique endpoint catalogue', () => {
-    expect(catalogue.length).toBeGreaterThanOrEqual(100);
-    expect(new Set(catalogue.map((route) => route.operationId)).size).toBe(catalogue.length);
+    expect(routes.length).toBeGreaterThanOrEqual(110);
+    expect(new Set(routes.map((route) => route.operationId)).size).toBe(routes.length);
   });
 
   test('blocks self deletion, scale-to-zero, and required config removal', () => {
     expect(() => policy.enforce({ input: { app: 'context-api', approval }, descriptor: descriptor('deleteHerokuApp'), source })).toThrow('cannot delete');
     expect(() => policy.enforce({ input: { app: 'context-api', type: 'web', body: { quantity: 0 }, approval }, descriptor: descriptor('updateHerokuFormation'), source })).toThrow('scaled to zero');
     expect(() => policy.enforce({ input: { app: 'context-api', key: 'HEROKU_API_TOKEN', approval }, descriptor: descriptor('deleteHerokuConfigVar'), source })).toThrow('cannot be removed');
+    expect(() => policy.enforce({ input: { app: 'context-api', body: { MONGODB_URI: null }, approval }, descriptor: descriptor('updateHerokuConfigVars'), source })).toThrow('cannot be cleared');
   });
 
   test('blocks non-allowlisted resources and unapproved sensitive operations', () => {
     expect(() => policy.enforce({ input: { app: 'unknown' }, descriptor: descriptor('getHerokuApp'), source })).toThrow('not allowlisted');
     expect(() => policy.enforce({ input: { app: 'disposable-app', body: { quantity: 2 } }, descriptor: descriptor('updateHerokuFormation'), source })).toThrow('approval evidence');
+    expect(() => policy.enforce({ input: { app: 'disposable-app', body: { hostname: 'bad.invalid' }, approval }, descriptor: descriptor('createHerokuDomain'), source })).toThrow('domain is not allowlisted');
   });
 
-  test('redacts sensitive configuration values', () => {
-    expect(policy.redactConfigVars({ NODE_ENV: 'production', MONGODB_URI: 'mongodb://secret' })).toEqual([
+  test('redacts config values and filters collection reads', () => {
+    expect(policy.redactConfigVars({ NODE_ENV: 'production', PUBLIC_URL: 'https://example.com', MONGODB_URI: 'mongodb://secret' })).toEqual([
       { key: 'NODE_ENV', configured: true, sensitive: false, value: 'production' },
+      { key: 'PUBLIC_URL', configured: true, sensitive: true, value: '[REDACTED]' },
       { key: 'MONGODB_URI', configured: true, sensitive: true, value: '[REDACTED]' },
     ]);
+    const config = getHerokuConfig({}, source);
+    expect(policy.filterCollection('listHerokuApps', [{ name: 'context-api' }, { name: 'private-app' }], config)).toEqual([{ name: 'context-api' }]);
   });
 
-  test('removes gateway control fields from upstream payloads', () => {
+  test('removes gateway control fields and normalizes special request bodies', () => {
     expect(service.sanitizeBody({ name: 'app', expectedEtag: 'etag', approval })).toEqual({ name: 'app' });
     expect(service.pathFor('/apps/{app}/dynos/{dyno}', { app: 'my app', dyno: 'web.1' })).toBe('/apps/my%20app/dynos/web.1');
+    expect(service.requestBody(descriptor('deleteHerokuConfigVar'), { params: { key: 'OLD_KEY' }, body: {} })).toEqual({ OLD_KEY: null });
+    expect(service.requestBody(descriptor('rollbackHerokuRelease'), { params: { release: 'v42' }, body: {} })).toEqual({ release: 'v42' });
   });
 });
