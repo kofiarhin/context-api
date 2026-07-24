@@ -10,8 +10,16 @@ function compact(value) {
   );
 }
 
+// `GET /v2/user` wraps the account in a `user` envelope; accept either shape.
 function user(value = {}) {
-  return compact({ id: value.id, username: value.username, name: value.name, email: value.email });
+  const source =
+    value && typeof value.user === 'object' && value.user !== null ? value.user : value;
+  return compact({
+    id: source.id,
+    username: source.username,
+    name: source.name,
+    email: source.email,
+  });
 }
 
 function team(value = {}) {
