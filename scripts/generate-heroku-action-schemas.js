@@ -7,6 +7,7 @@ const catalogue = require('../src/services/heroku/herokuCatalogue');
 const ROOT = path.join(__dirname, '..');
 const OUTPUT = path.join(ROOT, 'docs', 'openapi');
 const SERVER = 'https://context-api-3b9dfadf403e.herokuapp.com';
+const MAX_OPERATIONS = 30;
 
 function schemaFor(routes, title) {
   const paths = {};
@@ -24,22 +25,34 @@ function schemaFor(routes, title) {
       summary: `${route.classification}: ${route.operationId}`,
       security: [{ HerokuGatewayBearer: [] }],
       parameters,
-      ...(route.method === 'GET' ? {} : {
-        requestBody: {
-          required: false,
-          content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
-        },
-      }),
+      ...(route.method === 'GET'
+        ? {}
+        : {
+            requestBody: {
+              required: false,
+              content: {
+                'application/json': {
+                  schema: { type: 'object', additionalProperties: true },
+                },
+              },
+            },
+          }),
       responses: {
         '200': { description: 'Successful normalized Heroku response' },
+        '201': { description: 'Heroku resource created' },
         '202': { description: 'Heroku accepted an asynchronous operation' },
+        '204': { description: 'Heroku operation completed without a response body' },
         '400': { description: 'Invalid request' },
         '401': { description: 'Missing or invalid gateway bearer key' },
+        '402': { description: 'Billing verification required' },
         '403': { description: 'Policy or approval denied the operation' },
+        '404': { description: 'Resource not found' },
         '409': { description: 'Resource conflict' },
         '412': { description: 'Stale resource precondition' },
+        '422': { description: 'Heroku rejected the request' },
         '429': { description: 'Rate limited' },
         '502': { description: 'Heroku unavailable' },
+        '504': { description: 'Heroku request timed out' },
       },
     };
   }
@@ -64,13 +77,35 @@ function group(route) {
   return 'runtime';
 }
 
+function chunks(values, size = MAX_OPERATIONS) {
+  const output = [];
+  for (let index = 0; index < values.length; index += size) output.push(values.slice(index, index + size));
+  return output;
+}
+
 function outputs() {
   const files = new Map();
   files.set('zoro-heroku-action.yaml', schemaFor(catalogue, 'Context API Full Heroku Gateway'));
+
   for (const name of ['runtime', 'deploy', 'config', 'admin']) {
-    files.set(`zoro-heroku-${name}-action.yaml`, schemaFor(catalogue.filter((route) => group(route) === name), `Context API Heroku ${name}`));
+    const grouped = catalogue.filter((route) => group(route) === name);
+    chunks(grouped).forEach((routes, index) => {
+      const suffix = index === 0 ? '' : `-${index + 1}`;
+      files.set(
+        `zoro-heroku-${name}${suffix}-action.yaml`,
+        schemaFor(routes, `Context API Heroku ${name} ${index + 1}`)
+      );
+    });
   }
+
   return files;
+}
+
+function countOperations(schema) {
+  return Object.values(schema.paths).reduce(
+    (count, pathItem) => count + Object.keys(pathItem).filter((key) => ['get', 'post', 'patch', 'delete'].includes(key)).length,
+    0
+  );
 }
 
 function serialize(value) {
@@ -80,7 +115,12 @@ function serialize(value) {
 function main() {
   const check = process.argv.includes('--check');
   fs.mkdirSync(OUTPUT, { recursive: true });
+
   for (const [name, schema] of outputs()) {
+    if (name !== 'zoro-heroku-action.yaml' && countOperations(schema) > MAX_OPERATIONS) {
+      throw new Error(`Heroku Builder schema exceeds ${MAX_OPERATIONS} operations: ${name}`);
+    }
+
     const destination = path.join(OUTPUT, name);
     const expected = serialize(schema);
     if (check) {
@@ -91,8 +131,9 @@ function main() {
       fs.writeFileSync(destination, expected);
     }
   }
+
   console.log(check ? 'Heroku Action schemas are current.' : 'Heroku Action schemas generated.');
 }
 
 if (require.main === module) main();
-module.exports = { schemaFor, group, outputs, serialize };
+module.exports = { schemaFor, group, chunks, outputs, serialize, countOperations, MAX_OPERATIONS };
