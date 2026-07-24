@@ -4,6 +4,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const { sendResource, sendPagedCollection } = require('../utils/responses');
 const vercelService = require('../services/vercel.service');
 const vercelLogsService = require('../services/vercelLogs.service');
+const vercelDispatcher = require('../services/vercelDispatcher');
 
 function input(req) {
   return {
@@ -27,7 +28,17 @@ function collection(method, service = vercelService) {
   });
 }
 
+function dispatch(category) {
+  return asyncHandler(async (req, res) => {
+    const outcome = await vercelDispatcher.dispatch(category, input(req));
+    sendResource(res, outcome.result, outcome.status);
+  });
+}
+
 module.exports = {
+  dispatchRead: dispatch('read'),
+  dispatchWrite: dispatch('write'),
+  dispatchDestructive: dispatch('destructive'),
   getUser: resource('getUser'),
   listTeams: collection('listTeams'),
   getTeam: resource('getTeam'),
