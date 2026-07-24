@@ -5,6 +5,7 @@ const { translateHerokuError } = require('./herokuErrors');
 
 const BASE_URL = 'https://api.heroku.com';
 const ACCEPT = 'application/vnd.heroku+json; version=3';
+const MAX_LOG_BYTES = 256 * 1024;
 
 function buildQuery(query = {}) {
   const params = new URLSearchParams();
@@ -15,6 +16,14 @@ function buildQuery(query = {}) {
   }
   const output = params.toString();
   return output ? `?${output}` : '';
+}
+
+function operationalError(code, message, statusCode) {
+  const error = new Error(message);
+  error.code = code;
+  error.statusCode = statusCode;
+  error.isOperational = true;
+  return error;
 }
 
 async function request(method, path, options = {}) {
@@ -42,18 +51,8 @@ async function request(method, path, options = {}) {
       signal: controller.signal,
     });
   } catch (error) {
-    if (error.name === 'AbortError') {
-      const timeoutError = new Error('Heroku request timed out.');
-      timeoutError.code = 'HEROKU_TIMEOUT';
-      timeoutError.statusCode = 504;
-      timeoutError.isOperational = true;
-      throw timeoutError;
-    }
-    const unavailable = new Error('Heroku is currently unavailable.');
-    unavailable.code = 'HEROKU_UNAVAILABLE';
-    unavailable.statusCode = 502;
-    unavailable.isOperational = true;
-    throw unavailable;
+    if (error.name === 'AbortError') throw operationalError('HEROKU_TIMEOUT', 'Heroku request timed out.', 504);
+    throw operationalError('HEROKU_UNAVAILABLE', 'Heroku is currently unavailable.', 502);
   } finally {
     clearTimeout(timeout);
   }
@@ -70,13 +69,14 @@ async function request(method, path, options = {}) {
       data = text;
     }
   }
+  const remaining = response.headers.get('ratelimit-remaining');
 
   return {
     data,
     meta: {
       herokuRequestId: requestId || undefined,
       etag: response.headers.get('etag') || undefined,
-      rateLimitRemaining: Number(response.headers.get('ratelimit-remaining')) || undefined,
+      rateLimitRemaining: remaining === null ? undefined : Number(remaining),
       contentRange: response.headers.get('content-range') || undefined,
       asynchronous: response.status === 202,
     },
@@ -84,4 +84,40 @@ async function request(method, path, options = {}) {
   };
 }
 
-module.exports = { request, buildQuery, BASE_URL, ACCEPT };
+async function fetchLogText(urlValue, options = {}) {
+  const config = getHerokuConfig(options.baseEnv || {}, options.source || process.env);
+  let url;
+  try {
+    url = new URL(urlValue);
+  } catch {
+    throw operationalError('HEROKU_INVALID_LOG_URL', 'Heroku returned an invalid log URL.', 502);
+  }
+  if (url.protocol !== 'https:' || !(url.hostname === 'heroku.com' || url.hostname.endsWith('.heroku.com'))) {
+    throw operationalError('HEROKU_INVALID_LOG_URL', 'Heroku returned an untrusted log URL.', 502);
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), config.herokuLogFetchTimeoutMs);
+  timeout.unref();
+  try {
+    const response = await (options.fetchImpl || fetch)(url, {
+      method: 'GET',
+      redirect: 'error',
+      signal: controller.signal,
+      headers: { 'User-Agent': 'context-api-heroku-gateway/1.0' },
+    });
+    if (!response.ok) throw operationalError('HEROKU_LOG_UNAVAILABLE', 'Heroku logs are currently unavailable.', 502);
+    const text = await response.text();
+    return {
+      text: Buffer.byteLength(text, 'utf8') > MAX_LOG_BYTES ? Buffer.from(text).subarray(0, MAX_LOG_BYTES).toString('utf8') : text,
+      truncated: Buffer.byteLength(text, 'utf8') > MAX_LOG_BYTES,
+    };
+  } catch (error) {
+    if (error.name === 'AbortError') throw operationalError('HEROKU_TIMEOUT', 'Heroku log retrieval timed out.', 504);
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+module.exports = { request, fetchLogText, buildQuery, operationalError, BASE_URL, ACCEPT, MAX_LOG_BYTES };
