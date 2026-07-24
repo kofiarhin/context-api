@@ -3,7 +3,8 @@
 const { AppError } = require('../../utils/errors');
 const { getHerokuConfig } = require('../../config/heroku');
 
-const SENSITIVE_KEYS = /(token|secret|password|private[_-]?key|database_url|mongodb|redis|credential|certificate|api[_-]?key)/i;
+const SENSITIVE_KEYS = /(token|secret|password|private[_-]?key|database_url|mongodb|redis|credential|certificate|api[_-]?key|uri|url)/i;
+const SAFE_CONFIG_KEYS = new Set(['NODE_ENV', 'LOG_LEVEL']);
 const REQUIRED_SELF_KEYS = new Set(['HEROKU_API_TOKEN', 'ZORO_HEROKU_API_KEY', 'MONGODB_URI', 'PORT']);
 
 function denied(message) {
@@ -54,6 +55,12 @@ function enforce({ input, descriptor, baseEnv = {}, source = process.env }) {
     throw denied('The requested add-on plan is not allowlisted.');
   }
 
+  const hostname = body.hostname || body.hostname_pattern;
+  if (hostname && config.herokuDomainSuffixAllowlist.length) {
+    const allowed = config.herokuDomainSuffixAllowlist.some((suffix) => String(hostname).toLowerCase().endsWith(String(suffix).toLowerCase()));
+    if (!allowed) throw denied('The requested domain is not allowlisted.');
+  }
+
   const isSelf = input.app && String(input.app).toLowerCase() === String(config.herokuSelfApp).toLowerCase();
   if (isSelf) {
     if (descriptor.operationId === 'deleteHerokuApp' || descriptor.operationId === 'transferHerokuApp') {
@@ -68,18 +75,50 @@ function enforce({ input, descriptor, baseEnv = {}, source = process.env }) {
     if (descriptor.operationId === 'deleteHerokuConfigVar' && REQUIRED_SELF_KEYS.has(input.key)) {
       throw denied('A required Context API configuration value cannot be removed.');
     }
+    if (descriptor.operationId === 'updateHerokuConfigVars') {
+      for (const key of REQUIRED_SELF_KEYS) {
+        if (Object.prototype.hasOwnProperty.call(body, key) && (body[key] === null || body[key] === '')) {
+          throw denied('A required Context API configuration value cannot be cleared.');
+        }
+      }
+    }
   }
 
   return config;
 }
 
 function redactConfigVars(values = {}) {
-  return Object.entries(values).map(([key, value]) => ({
-    key,
-    configured: value !== undefined && value !== null,
-    sensitive: SENSITIVE_KEYS.test(key),
-    value: SENSITIVE_KEYS.test(key) ? '[REDACTED]' : String(value),
-  }));
+  return Object.entries(values).map(([key, value]) => {
+    const safe = SAFE_CONFIG_KEYS.has(key) && !SENSITIVE_KEYS.test(key);
+    return {
+      key,
+      configured: value !== undefined && value !== null,
+      sensitive: !safe,
+      value: safe ? String(value) : '[REDACTED]',
+    };
+  });
 }
 
-module.exports = { enforce, redactConfigVars, SENSITIVE_KEYS, REQUIRED_SELF_KEYS };
+function filterCollection(operationId, data, config) {
+  if (!Array.isArray(data) || config.herokuResourceAccess === 'all') return data;
+  const definitions = {
+    listHerokuApps: ['name', config.herokuAppAllowlist],
+    listHerokuTeams: ['name', config.herokuTeamAllowlist],
+    listHerokuPipelines: ['name', config.herokuPipelineAllowlist],
+    listHerokuSpaces: ['name', config.herokuSpaceAllowlist],
+  };
+  const definition = definitions[operationId];
+  if (!definition) return data;
+  const [field, allowlist] = definition;
+  return data.filter((item) => matches(item && (item[field] || item.id), allowlist));
+}
+
+module.exports = {
+  enforce,
+  redactConfigVars,
+  filterCollection,
+  matches,
+  SENSITIVE_KEYS,
+  SAFE_CONFIG_KEYS,
+  REQUIRED_SELF_KEYS,
+};
