@@ -1,13 +1,13 @@
 'use strict';
 
 const { Router } = require('express');
-const catalogue = require('../../services/heroku/herokuCatalogue');
+const routes = require('../../services/heroku/herokuRoutes');
 const controller = require('../../controllers/heroku.controller');
 const { RouteNotFoundError } = require('../../utils/errors');
 
 const router = Router();
 
-for (const descriptor of catalogue) {
+for (const descriptor of routes) {
   router[descriptor.method.toLowerCase()](descriptor.route, controller.handler(descriptor));
 }
 
