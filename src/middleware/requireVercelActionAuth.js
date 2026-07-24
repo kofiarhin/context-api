@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const { getVercelConfig } = require('../config/vercel');
 const { AuthenticationRequiredError } = require('../utils/errors');
 
-const BEARER = /^Bearer +(.+)$/i;
+const BEARER = /^Bearer +(\S+)$/i;
 
 function secretsMatch(supplied, expected) {
   const suppliedDigest = crypto.createHash('sha256').update(supplied, 'utf8').digest();
