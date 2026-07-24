@@ -40,6 +40,10 @@ function requestBody(descriptor, input) {
   if (descriptor.operationId === 'transferHerokuApp') {
     return { app: input.params.app, ...(input.body || {}) };
   }
+  if (descriptor.operationId === 'updateHerokuAppStack') {
+    const body = input.body || {};
+    return { build_stack: body.build_stack || body.stack };
+  }
   return input.body;
 }
 
@@ -101,6 +105,8 @@ async function execute(descriptor, rawInput, options = {}) {
     descriptor.operationId === 'listHerokuPipelineConfigVarMetadata'
   ) {
     result.data = policy.redactConfigVars(result.data || {});
+  } else if (descriptor.operationId === 'getHerokuAppStack') {
+    result.data = serializer.serialize(descriptor.operationId, result.data && result.data.build_stack);
   } else {
     result.data = policy.filterCollection(descriptor.operationId, result.data, config);
     result.data = serializer.serialize(descriptor.operationId, result.data);
