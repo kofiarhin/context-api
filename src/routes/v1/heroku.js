@@ -15,7 +15,7 @@ router.post('/operations/:operationId', validateHeroku, (req, res, next) => {
     next(new ResourceNotFoundError('The requested Heroku operation was not found.'));
     return;
   }
-  controller.handler(descriptor)(req, res, next);
+  controller.handler(descriptor, { dispatch: true })(req, res, next);
 });
 
 for (const descriptor of routes) {
