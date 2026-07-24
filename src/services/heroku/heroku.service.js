@@ -7,9 +7,15 @@ function pathFor(template, params) {
   return template.replace(/\{([^}]+)\}/g, (_, key) => encodeURIComponent(params[key]));
 }
 
+function sanitizeBody(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return body;
+  const { approval, expectedEtag, ...payload } = body;
+  return payload;
+}
+
 function stripControl(input) {
   const { approval, expectedEtag, range, body, query, ...params } = input;
-  return { approval, expectedEtag, range, body, query, params };
+  return { approval, expectedEtag, range, body: sanitizeBody(body), query, params };
 }
 
 function deleteConfigBody(input) {
@@ -43,4 +49,4 @@ async function execute(descriptor, rawInput, options = {}) {
   return result;
 }
 
-module.exports = { execute, pathFor, stripControl };
+module.exports = { execute, pathFor, stripControl, sanitizeBody };
