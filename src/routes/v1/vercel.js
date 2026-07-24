@@ -11,6 +11,10 @@ const { RouteNotFoundError } = require('../../utils/errors');
 
 const router = Router();
 
+router.post('/read', validateVercelBody, controller.dispatchRead);
+router.post('/write', validateVercelBody, controller.dispatchWrite);
+router.post('/destructive', validateVercelBody, controller.dispatchDestructive);
+
 router.get('/user', controller.getUser);
 router.get('/teams', validateVercelQuery, controller.listTeams);
 router.get('/teams/:teamId', validateVercelParams, controller.getTeam);
