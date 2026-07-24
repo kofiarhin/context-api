@@ -14,6 +14,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "generate:heroku-actions": "node scripts/generate-heroku-action-schemas.js",
     "verify:github-gateway": "node scripts/validate-github-gateway-release.js",
     "verify:vercel-gateway": "node scripts/validate-vercel-gateway-release.js",
     "verify:heroku-gateway": "node scripts/validate-heroku-gateway-release.js",
