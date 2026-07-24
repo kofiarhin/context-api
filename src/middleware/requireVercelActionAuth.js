@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const { getVercelConfig } = require('../config/vercel');
 const { AuthenticationRequiredError } = require('../utils/errors');
 
-const BEARER = /^Bearer +(.+)$/i;
+const BEARER = /^Bearer +(\S+)$/i;
 
 function secretsMatch(supplied, expected) {
   const suppliedDigest = crypto.createHash('sha256').update(supplied, 'utf8').digest();
@@ -13,25 +13,33 @@ function secretsMatch(supplied, expected) {
 }
 
 function requireVercelActionAuth(baseEnv = {}, options = {}) {
-  let expected = null;
+  const source = options.source || process.env;
+  let vercelConfig = null;
 
   try {
-    expected = getVercelConfig(baseEnv, options.source || process.env).zoroVercelApiKey;
+    vercelConfig = getVercelConfig(baseEnv, source);
   } catch {
-    expected = null;
+    vercelConfig = null;
   }
 
+  const expectedKeys = [
+    vercelConfig && vercelConfig.zoroVercelApiKey,
+    baseEnv.zoroGithubApiKey,
+    source.ZORO_GITHUB_API_KEY,
+  ].filter((value, index, values) => value && values.indexOf(value) === index);
+
   return function vercelActionAuth(req, res, next) {
-    if (!expected) {
+    if (!vercelConfig || !vercelConfig.vercelToken || expectedKeys.length === 0) {
       next(new AuthenticationRequiredError());
       return;
     }
 
     const header = req.get('authorization');
     const match = header ? BEARER.exec(header.trim()) : null;
-    const token = match ? match[1].trim() : '';
+    const token = match ? match[1] : '';
+    const accepted = token && expectedKeys.some((expected) => secretsMatch(token, expected));
 
-    if (!token || !secretsMatch(token, expected)) {
+    if (!accepted) {
       next(new AuthenticationRequiredError());
       return;
     }
