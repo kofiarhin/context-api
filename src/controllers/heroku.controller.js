@@ -1,7 +1,7 @@
 'use strict';
 
 const asyncHandler = require('../utils/asyncHandler');
-const { sendResource } = require('../utils/responses');
+const { API_VERSION } = require('../utils/responses');
 const service = require('../services/heroku/heroku.service');
 
 function handler(descriptor) {
@@ -15,8 +15,14 @@ function handler(descriptor) {
       range: req.get('range'),
     };
     const result = await service.execute(descriptor, input);
-    if (result.meta) res.locals.providerMeta = result.meta;
-    sendResource(res, result.data, result.status === 201 ? 201 : result.status === 202 ? 202 : 200);
+    if (result.status === 204) {
+      res.status(204).end();
+      return;
+    }
+    res.status(result.status || 200).json({
+      data: result.data,
+      meta: { ...(result.meta || {}), version: API_VERSION },
+    });
   });
 }
 
