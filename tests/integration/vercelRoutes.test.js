@@ -46,6 +46,7 @@ jest.mock('../../src/services/vercel.service', () => ({
 const vercelService = require('../../src/services/vercel.service');
 
 const API_KEY = 'zoro-vercel-test-key-that-is-at-least-32-characters';
+const SHARED_KEY = 'zoro-github-shared-key-that-is-at-least-32-characters';
 const vercelEnvSource = {
   VERCEL_TOKEN: 'vercel-token-for-tests',
   VERCEL_TEAM_ID: 'team_test',
@@ -56,10 +57,15 @@ const vercelEnvSource = {
   VERCEL_ALLOW_DESTRUCTIVE_OPERATIONS: 'false',
 };
 
-const app = createApp({ env: loadEnv(process.env), vercelEnvSource });
+const baseEnv = loadEnv(process.env);
+const app = createApp({ env: baseEnv, vercelEnvSource });
+const sharedKeyApp = createApp({
+  env: { ...baseEnv, zoroGithubApiKey: SHARED_KEY },
+  vercelEnvSource,
+});
 
-function auth() {
-  return `Bearer ${API_KEY}`;
+function auth(key = API_KEY) {
+  return `Bearer ${key}`;
 }
 
 beforeEach(() => {
@@ -69,6 +75,7 @@ beforeEach(() => {
     data: [{ id: 'prj_123', name: 'example-project' }],
     meta: {},
   });
+  vercelService.getProject.mockResolvedValue({ id: 'prj_123', name: 'example-project' });
   vercelService.createDeployment.mockResolvedValue({ id: 'dpl_1', target: 'preview' });
   vercelService.listEnvironmentVariables.mockResolvedValue({
     data: [{ id: 'env_1', key: 'API_URL', valueConfigured: true }],
@@ -111,26 +118,30 @@ describe('Vercel gateway authentication', () => {
 
     try {
       process.env.LOG_LEVEL = 'warn';
-
       await request(app).get('/api/v1/vercel/user').set('Authorization', `Bearer ${bad}`);
-
       const output = write.mock.calls.map(([entry]) => String(entry)).join('\n');
-
       expect(output).not.toContain(bad);
       expect(output).not.toContain(API_KEY);
       expect(output).not.toContain(vercelEnvSource.VERCEL_TOKEN);
     } finally {
-      if (previousLogLevel === undefined) {
-        delete process.env.LOG_LEVEL;
-      } else {
-        process.env.LOG_LEVEL = previousLogLevel;
-      }
+      if (previousLogLevel === undefined) delete process.env.LOG_LEVEL;
+      else process.env.LOG_LEVEL = previousLogLevel;
       write.mockRestore();
     }
   });
 
   it('accepts the configured Vercel action key', async () => {
     const response = await request(app).get('/api/v1/vercel/user').set('Authorization', auth());
+    expect(response.status).toBe(200);
+    expect(response.body.data).toMatchObject({ id: 'user_1', username: 'kofi' });
+  });
+
+  it('accepts the existing shared Zoro Action key', async () => {
+    const response = await request(sharedKeyApp)
+      .post('/api/v1/vercel/read')
+      .set('Authorization', auth(SHARED_KEY))
+      .send({ operation: 'getUser', parameters: {} });
+
     expect(response.status).toBe(200);
     expect(response.body.data).toMatchObject({ id: 'user_1', username: 'kofi' });
   });
@@ -161,6 +172,44 @@ describe('Vercel gateway routes', () => {
       name: 'example-project',
       project: 'example-project',
     });
+  });
+
+  it('dispatches grouped read operations', async () => {
+    const response = await request(app)
+      .post('/api/v1/vercel/read')
+      .set('Authorization', auth())
+      .send({ operation: 'getProject', parameters: { project: 'example-project' } });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toMatchObject({ id: 'prj_123', name: 'example-project' });
+    expect(vercelService.getProject).toHaveBeenCalledWith({ project: 'example-project' });
+  });
+
+  it('dispatches grouped create operations with the correct status', async () => {
+    const response = await request(app)
+      .post('/api/v1/vercel/write')
+      .set('Authorization', auth())
+      .send({
+        operation: 'createDeployment',
+        parameters: { project: 'example-project', name: 'example-project' },
+      });
+
+    expect(response.status).toBe(201);
+    expect(vercelService.createDeployment).toHaveBeenCalledWith({
+      project: 'example-project',
+      name: 'example-project',
+    });
+  });
+
+  it('rejects operations sent to the wrong dispatcher', async () => {
+    const response = await request(app)
+      .post('/api/v1/vercel/read')
+      .set('Authorization', auth())
+      .send({ operation: 'deleteProject', parameters: { project: 'example-project' } });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    expect(vercelService.deleteProject).not.toHaveBeenCalled();
   });
 
   it('does not expose environment variable values in mocked metadata', async () => {
