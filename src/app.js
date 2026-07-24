@@ -44,13 +44,32 @@ function createApp(options = {}) {
   app.get('/health', getHealth);
   app.use('/api/v1', createRateLimiter(env), allowedMethods);
 
-  app.use('/api/v1/github', express.json({ limit: GITHUB_JSON_BODY_LIMIT }), requireGithubActionAuth(env), requireGithubRepositoryAccess(env), githubRouter);
-  app.use('/api/v1/vercel', express.json({ limit: VERCEL_JSON_BODY_LIMIT }), requireVercelActionAuth(env, { source: options.vercelEnvSource }), vercelRouter);
-  app.use('/api/v1/heroku', express.json({ limit: HEROKU_JSON_BODY_LIMIT }), requireHerokuActionAuth(env, { source: options.herokuEnvSource }), herokuRouter);
+  app.use(
+    '/api/v1/github',
+    express.json({ limit: GITHUB_JSON_BODY_LIMIT }),
+    requireGithubActionAuth(env),
+    requireGithubRepositoryAccess(env),
+    githubRouter
+  );
+
+  app.use(
+    '/api/v1/vercel',
+    express.json({ limit: VERCEL_JSON_BODY_LIMIT }),
+    requireVercelActionAuth(env, { source: options.vercelEnvSource }),
+    vercelRouter
+  );
+
+  app.use(
+    '/api/v1/heroku',
+    express.json({ limit: HEROKU_JSON_BODY_LIMIT }),
+    requireHerokuActionAuth(env, { source: options.herokuEnvSource }),
+    herokuRouter
+  );
 
   app.use('/api/v1', express.json({ limit: JSON_BODY_LIMIT }), requireDatabase, v1Router);
   app.use(notFound);
   app.use(errorHandler);
+
   return app;
 }
 
