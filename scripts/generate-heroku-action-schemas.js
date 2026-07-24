@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const catalogue = require('../src/services/heroku/herokuCatalogue');
+const catalogue = require('../src/services/heroku/herokuRoutes');
 
 const ROOT = path.join(__dirname, '..');
 const OUTPUT = path.join(ROOT, 'docs', 'openapi');
