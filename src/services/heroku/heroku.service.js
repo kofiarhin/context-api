@@ -1,5 +1,6 @@
 'use strict';
 
+const { ValidationError } = require('../../utils/errors');
 const client = require('./herokuClient');
 const policy = require('./herokuPolicy');
 
@@ -11,11 +12,7 @@ const UPSTREAM_OVERRIDES = {
 function pathFor(template, params) {
   return template.replace(/\{([^}]+)\}/g, (_, key) => {
     if (params[key] === undefined || params[key] === null || params[key] === '') {
-      const error = new Error(`Missing Heroku path parameter: ${key}.`);
-      error.code = 'VALIDATION_ERROR';
-      error.statusCode = 400;
-      error.isOperational = true;
-      throw error;
+      throw new ValidationError(`Missing Heroku path parameter: ${key}.`);
     }
     return encodeURIComponent(params[key]);
   });
@@ -33,7 +30,9 @@ function stripControl(input) {
 }
 
 function requestBody(descriptor, input) {
-  if (descriptor.operationId === 'deleteHerokuConfigVar') return { [input.params.key]: null };
+  if (descriptor.operationId === 'deleteHerokuConfigVar') {
+    return { [input.params.key]: null };
+  }
   if (descriptor.operationId === 'rollbackHerokuRelease') {
     return { release: input.params.release, ...(input.body || {}) };
   }
@@ -49,12 +48,16 @@ async function queryLogs(descriptor, input, config, options) {
     tail: false,
     lines: Math.min(Number((input.body || {}).lines || 100), 1500),
   };
-  const session = await client.request('POST', pathFor(descriptor.upstream, input.params), {
-    baseEnv: config,
-    source: options.source,
-    fetchImpl: options.fetchImpl,
-    body: sessionBody,
-  });
+  const session = await client.request(
+    'POST',
+    pathFor(descriptor.upstream, input.params),
+    {
+      baseEnv: config,
+      source: options.source,
+      fetchImpl: options.fetchImpl,
+      body: sessionBody,
+    }
+  );
   const url = session.data && (session.data.logplex_url || session.data.url);
   const logs = await client.fetchLogText(url, {
     baseEnv: config,
