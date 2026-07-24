@@ -3,14 +3,26 @@
 const { Router } = require('express');
 const routes = require('../../services/heroku/herokuRoutes');
 const controller = require('../../controllers/heroku.controller');
-const { RouteNotFoundError } = require('../../utils/errors');
+const validateHeroku = require('../../middleware/validateHeroku');
+const { RouteNotFoundError, ResourceNotFoundError } = require('../../utils/errors');
 
 const router = Router();
+const byOperationId = new Map(routes.map((descriptor) => [descriptor.operationId, descriptor]));
+
+router.post('/operations/:operationId', validateHeroku, (req, res, next) => {
+  const descriptor = byOperationId.get(req.params.operationId);
+  if (!descriptor) {
+    next(new ResourceNotFoundError('The requested Heroku operation was not found.'));
+    return;
+  }
+  controller.handler(descriptor)(req, res, next);
+});
 
 for (const descriptor of routes) {
-  router[descriptor.method.toLowerCase()](descriptor.route, controller.handler(descriptor));
+  router[descriptor.method.toLowerCase()](descriptor.route, validateHeroku, controller.handler(descriptor));
 }
 
 router.use((req, res, next) => next(new RouteNotFoundError()));
 
 module.exports = router;
+module.exports.byOperationId = byOperationId;
