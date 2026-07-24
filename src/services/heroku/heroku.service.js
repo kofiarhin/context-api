@@ -3,13 +3,27 @@
 const client = require('./herokuClient');
 const policy = require('./herokuPolicy');
 
+const UPSTREAM_OVERRIDES = {
+  transferHerokuApp: '/account/app-transfers',
+  listHerokuPipelinePromotionTargets: '/pipeline-promotions/{promotion}/promotion-targets',
+};
+
 function pathFor(template, params) {
-  return template.replace(/\{([^}]+)\}/g, (_, key) => encodeURIComponent(params[key]));
+  return template.replace(/\{([^}]+)\}/g, (_, key) => {
+    if (params[key] === undefined || params[key] === null || params[key] === '') {
+      const error = new Error(`Missing Heroku path parameter: ${key}.`);
+      error.code = 'VALIDATION_ERROR';
+      error.statusCode = 400;
+      error.isOperational = true;
+      throw error;
+    }
+    return encodeURIComponent(params[key]);
+  });
 }
 
 function sanitizeBody(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return body;
-  const { approval, expectedEtag, ...payload } = body;
+  const { approval, expectedEtag, params, query, ...payload } = body;
   return payload;
 }
 
@@ -18,9 +32,40 @@ function stripControl(input) {
   return { approval, expectedEtag, range, body: sanitizeBody(body), query, params };
 }
 
-function deleteConfigBody(input) {
-  if (input.descriptor.operationId !== 'deleteHerokuConfigVar') return input.body;
-  return { [input.params.key]: null };
+function requestBody(descriptor, input) {
+  if (descriptor.operationId === 'deleteHerokuConfigVar') return { [input.params.key]: null };
+  if (descriptor.operationId === 'rollbackHerokuRelease') {
+    return { release: input.params.release, ...(input.body || {}) };
+  }
+  if (descriptor.operationId === 'transferHerokuApp') {
+    return { app: input.params.app, ...(input.body || {}) };
+  }
+  return input.body;
+}
+
+async function queryLogs(descriptor, input, config, options) {
+  const sessionBody = {
+    ...(input.body || {}),
+    tail: false,
+    lines: Math.min(Number((input.body || {}).lines || 100), 1500),
+  };
+  const session = await client.request('POST', pathFor(descriptor.upstream, input.params), {
+    baseEnv: config,
+    source: options.source,
+    fetchImpl: options.fetchImpl,
+    body: sessionBody,
+  });
+  const url = session.data && (session.data.logplex_url || session.data.url);
+  const logs = await client.fetchLogText(url, {
+    baseEnv: config,
+    source: options.source,
+    fetchImpl: options.logFetchImpl || options.fetchImpl,
+  });
+  return {
+    data: logs,
+    meta: session.meta,
+    status: 200,
+  };
 }
 
 async function execute(descriptor, rawInput, options = {}) {
@@ -32,21 +77,38 @@ async function execute(descriptor, rawInput, options = {}) {
     source: options.source,
   });
 
-  const result = await client.request(descriptor.method, pathFor(descriptor.upstream, input.params), {
+  if (descriptor.operationId === 'queryHerokuLogs') {
+    return queryLogs(descriptor, input, config, options);
+  }
+
+  const upstream = UPSTREAM_OVERRIDES[descriptor.operationId] || descriptor.upstream;
+  const result = await client.request(descriptor.method, pathFor(upstream, input.params), {
     baseEnv: config,
     source: options.source,
     fetchImpl: options.fetchImpl,
     expectedEtag: input.expectedEtag,
     range: input.range,
     query: input.query,
-    body: deleteConfigBody({ descriptor, params: input.params, body: input.body }),
+    body: requestBody(descriptor, input),
   });
 
-  if (descriptor.operationId === 'listHerokuConfigVarMetadata' || descriptor.operationId === 'listHerokuPipelineConfigVarMetadata') {
+  if (
+    descriptor.operationId === 'listHerokuConfigVarMetadata' ||
+    descriptor.operationId === 'listHerokuPipelineConfigVarMetadata'
+  ) {
     result.data = policy.redactConfigVars(result.data || {});
   }
 
+  result.data = policy.filterCollection(descriptor.operationId, result.data, config);
   return result;
 }
 
-module.exports = { execute, pathFor, stripControl, sanitizeBody };
+module.exports = {
+  execute,
+  queryLogs,
+  pathFor,
+  stripControl,
+  sanitizeBody,
+  requestBody,
+  UPSTREAM_OVERRIDES,
+};
