@@ -1,6 +1,7 @@
 'use strict';
 
 const { ValidationError } = require('../../utils/errors');
+const serializer = require('../../serializers/heroku.serializer');
 const client = require('./herokuClient');
 const policy = require('./herokuPolicy');
 
@@ -100,9 +101,11 @@ async function execute(descriptor, rawInput, options = {}) {
     descriptor.operationId === 'listHerokuPipelineConfigVarMetadata'
   ) {
     result.data = policy.redactConfigVars(result.data || {});
+  } else {
+    result.data = policy.filterCollection(descriptor.operationId, result.data, config);
+    result.data = serializer.serialize(descriptor.operationId, result.data);
   }
 
-  result.data = policy.filterCollection(descriptor.operationId, result.data, config);
   return result;
 }
 
