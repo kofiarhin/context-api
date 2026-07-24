@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "CRUD API for structured, reusable user, engineering, project, workflow, glossary, and learning context.",
   "main": "src/server.js",
-  "engines": { "node": "24.x" },
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
@@ -24,7 +26,12 @@
     "seed": "node src/seeds/index.js",
     "seed:reset": "node src/seeds/index.js --reset"
   },
-  "keywords": ["context", "express", "mongodb", "api"],
+  "keywords": [
+    "context",
+    "express",
+    "mongodb",
+    "api"
+  ],
   "author": "Kofi Arhin",
   "license": "ISC",
   "dependencies": {
