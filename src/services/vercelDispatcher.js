@@ -115,7 +115,9 @@ function createDispatcher(options = {}) {
 
 const dispatcher = createDispatcher();
 
-module.exports = dispatcher;
-module.exports.createDispatcher = createDispatcher;
-module.exports.CATALOG = CATALOG;
-module.exports.normalizeInput = normalizeInput;
+module.exports = {
+  dispatch: dispatcher.dispatch.bind(dispatcher),
+  createDispatcher,
+  CATALOG,
+  normalizeInput,
+};
