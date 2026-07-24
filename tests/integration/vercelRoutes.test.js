@@ -65,7 +65,10 @@ function auth() {
 beforeEach(() => {
   jest.clearAllMocks();
   vercelService.getUser.mockResolvedValue({ id: 'user_1', username: 'kofi' });
-  vercelService.listProjects.mockResolvedValue({ data: [{ id: 'prj_123', name: 'example-project' }], meta: {} });
+  vercelService.listProjects.mockResolvedValue({
+    data: [{ id: 'prj_123', name: 'example-project' }],
+    meta: {},
+  });
   vercelService.createDeployment.mockResolvedValue({ id: 'dpl_1', target: 'preview' });
   vercelService.listEnvironmentVariables.mockResolvedValue({
     data: [{ id: 'env_1', key: 'API_URL', valueConfigured: true }],
@@ -91,10 +94,43 @@ describe('Vercel gateway authentication', () => {
     expect(JSON.stringify(response.body)).not.toContain(API_KEY);
   });
 
-  it('accepts the configured Vercel action key', async () => {
+  it('rejects malformed bearer credentials', async () => {
     const response = await request(app)
       .get('/api/v1/vercel/user')
-      .set('Authorization', auth());
+      .set('Authorization', `Bearer ${API_KEY} extra`);
+
+    expect(response.status).toBe(401);
+    expect(response.body.error.code).toBe('AUTHENTICATION_REQUIRED');
+    expect(vercelService.getUser).not.toHaveBeenCalled();
+  });
+
+  it('never writes supplied or configured secrets to rejection logs', async () => {
+    const bad = 'wrong-vercel-key-that-is-at-least-32-characters';
+    const previousLogLevel = process.env.LOG_LEVEL;
+    const write = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+    try {
+      process.env.LOG_LEVEL = 'warn';
+
+      await request(app).get('/api/v1/vercel/user').set('Authorization', `Bearer ${bad}`);
+
+      const output = write.mock.calls.map(([entry]) => String(entry)).join('\n');
+
+      expect(output).not.toContain(bad);
+      expect(output).not.toContain(API_KEY);
+      expect(output).not.toContain(vercelEnvSource.VERCEL_TOKEN);
+    } finally {
+      if (previousLogLevel === undefined) {
+        delete process.env.LOG_LEVEL;
+      } else {
+        process.env.LOG_LEVEL = previousLogLevel;
+      }
+      write.mockRestore();
+    }
+  });
+
+  it('accepts the configured Vercel action key', async () => {
+    const response = await request(app).get('/api/v1/vercel/user').set('Authorization', auth());
     expect(response.status).toBe(200);
     expect(response.body.data).toMatchObject({ id: 'user_1', username: 'kofi' });
   });
@@ -146,9 +182,7 @@ describe('Vercel gateway routes', () => {
   });
 
   it('returns a gateway-local 404 without database middleware', async () => {
-    const response = await request(app)
-      .get('/api/v1/vercel/unknown')
-      .set('Authorization', auth());
+    const response = await request(app).get('/api/v1/vercel/unknown').set('Authorization', auth());
     expect(response.status).toBe(404);
     expect(response.body.error.code).toBe('ROUTE_NOT_FOUND');
   });

@@ -88,6 +88,36 @@ and write, pull requests read and write. Nothing broader.
 
 Startup fails fast and lists every problem if required variables are missing or malformed.
 
+### Vercel gateway configuration
+
+Set these Heroku config vars for the Vercel gateway. Never commit populated values, paste them into
+docs, or print them in terminal output.
+
+| Variable                              | Required | Notes                                     |
+| ------------------------------------- | -------- | ----------------------------------------- |
+| `VERCEL_TOKEN`                        | yes      | Server-side upstream Vercel bearer token  |
+| `ZORO_VERCEL_API_KEY`                 | yes      | Gateway bearer secret, minimum 32 chars   |
+| `VERCEL_TEAM_ID`                      | no       | Team scope when operating against a team  |
+| `VERCEL_TEAM_SLUG`                    | no       | Display metadata only                     |
+| `VERCEL_PROJECT_ALLOWLIST`            | no       | Comma-separated project IDs or names      |
+| `VERCEL_DOMAIN_ALLOWLIST`             | no       | Comma-separated DNS names                 |
+| `VERCEL_REPOSITORY_ALLOWLIST`         | no       | Comma-separated `owner/repo` entries      |
+| `VERCEL_ALLOW_DESTRUCTIVE_OPERATIONS` | no       | Keep `false` unless separately authorized |
+
+Generate the gateway bearer key with at least 32 bytes of entropy. A hex-encoded 32-byte value is
+the normal shape:
+
+```bash
+node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Do not reuse `ZORO_GITHUB_API_KEY`. Configure the generated value in Heroku and in the GPT Action
+authentication panel. The key must be transported as:
+
+```http
+Authorization: Bearer <ZORO_VERCEL_API_KEY>
+```
+
 ## Deploying
 
 Heroku deploys the branch you push to its `main`. Deploy only a commit that has passed CI.
@@ -199,6 +229,85 @@ Use a **disposable path in a non-critical repository**. Do not use production ap
 10. Delete the temporary branch through the GitHub UI — branch deletion is not exposed by this API.
 
 Confirm no secret value appeared in any command output or in `heroku logs`.
+
+## Verifying the deployed Vercel gateway
+
+On Windows, use Git Bash for the examples below so `export`, `read -rs`, and `$VARIABLE` expansion
+behave as shown. Keep the key in shell memory only. Never paste it inline, never echo it, and never
+use `curl --insecure`. If Windows curl reports a certificate revocation check failure, use
+`--ssl-no-revoke`; this preserves certificate validation while bypassing the local revocation-check
+problem.
+
+```bash
+BASE=https://context-api-3b9dfadf403e.herokuapp.com
+read -rs ZORO_VERCEL_API_KEY && export ZORO_VERCEL_API_KEY
+AUTH="Authorization: Bearer $ZORO_VERCEL_API_KEY"
+```
+
+Run the authentication checks before any write operation:
+
+```bash
+# 1. Unauthenticated access is refused
+curl --ssl-no-revoke -s -o /dev/null -w '%{http_code}\n' "$BASE/api/v1/vercel/user"
+# expect 401
+
+# 2. Authenticated current-user smoke test
+curl --ssl-no-revoke -s -o /dev/null -w '%{http_code}\n' -H "$AUTH" "$BASE/api/v1/vercel/user"
+# expect 200
+```
+
+If step 2 returns `401 AUTHENTICATION_REQUIRED`, compare SHA-256 hashes only. Do not compare,
+print, screenshot, or paste the secret value.
+
+Local hash:
+
+```bash
+node -e "console.log(require('crypto').createHash('sha256').update(process.env.ZORO_VERCEL_API_KEY || '').digest('hex'))"
+```
+
+Heroku hash:
+
+```bash
+heroku run 'node -e "console.log(require(\"crypto\").createHash(\"sha256\").update(process.env.ZORO_VERCEL_API_KEY || \"\").digest(\"hex\"))"' --app context-api
+```
+
+The two hashes must match exactly. The SHA-256 hash of an empty local value is:
+
+```text
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+```
+
+If the local hash equals that value, the local shell has not loaded `ZORO_VERCEL_API_KEY`. Reload it
+from the secure source and rerun the authenticated smoke test.
+
+### Rotating the Vercel gateway key
+
+Rotate `ZORO_VERCEL_API_KEY` when exposure is suspected, when local and Heroku hashes cannot be
+reconciled, or on the normal credential rotation schedule. This rotates only the Zoro-to-Context-API
+gateway key; rotate `VERCEL_TOKEN` separately in Vercel if provider access is exposed.
+
+```bash
+NEW_KEY=$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))")
+heroku config:set ZORO_VERCEL_API_KEY="$NEW_KEY" --app context-api
+export ZORO_VERCEL_API_KEY="$NEW_KEY"
+unset NEW_KEY
+```
+
+Then update the GPT Action authentication panel with the new bearer key, save the GPT, start a fresh
+conversation, and rerun the authenticated smoke test. Do not print the old or new key.
+
+### Vercel gateway troubleshooting
+
+- `401` without an `Authorization` header is expected and proves the route fails closed.
+- `401` with a bearer header usually means the local key is empty, stale, copied with extra shell
+  quoting, or different from Heroku. Compare hashes only.
+- If local and Heroku hashes match but `401` continues, verify the Heroku release SHA and ensure the
+  deployed dyno is running the expected code.
+- If authentication succeeds but Vercel calls fail, inspect `VERCEL_TOKEN`, team scope, allowlists,
+  and upstream Vercel permissions without printing secret values.
+- Use `heroku config --app context-api | cut -d: -f1` to list variable names only.
+- Never run `heroku config:get ZORO_VERCEL_API_KEY --app context-api` unless piping directly into a
+  hash command that does not print the secret.
 
 ## Rolling back the GitHub gateway
 
