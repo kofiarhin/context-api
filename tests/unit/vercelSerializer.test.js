@@ -76,6 +76,26 @@ describe('Vercel user serialization', () => {
   });
 });
 
+describe('Vercel deployment serialization', () => {
+  it('reports an upstream null target as preview', () => {
+    // Vercel represents a Preview deployment as `target: null`, because the
+    // create endpoint has no `preview` value to send or return.
+    expect(serializer.deployment({ uid: 'dpl_1', target: null })).toEqual({
+      id: 'dpl_1',
+      target: 'preview',
+    });
+  });
+
+  it('preserves an explicit production target', () => {
+    expect(serializer.deployment({ uid: 'dpl_1', target: 'production' }).target).toBe('production');
+  });
+
+  it('invents no target when the payload has none', () => {
+    expect(serializer.deployment({ uid: 'dpl_1' })).toEqual({ id: 'dpl_1' });
+    expect(serializer.deployment({})).toEqual({});
+  });
+});
+
 describe('Vercel service getUser', () => {
   it('serializes the upstream envelope returned by the client', async () => {
     const client = { request: jest.fn().mockResolvedValue(userEnvelopeFixture()) };

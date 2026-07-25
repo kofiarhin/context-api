@@ -1,24 +1,35 @@
 'use strict';
 
 const { getEnv } = require('../config/env');
-const { VercelForbiddenError, ValidationError } = require('../utils/errors');
 const { createVercelClient } = require('./vercelClient');
 const { createPolicy } = require('./vercelPolicy');
 const serializer = require('../serializers/vercel.serializer');
-
-function getProductionBranch(project = {}) {
-  return project.productionBranch || (project.link && project.link.productionBranch) || null;
-}
-
-function getDeploymentTarget(deployment = {}) {
-  return String(deployment.target || deployment.environment || '').trim().toLowerCase();
-}
 
 function createService(options = {}) {
   const env = options.env || getEnv();
   const client = options.client || createVercelClient(env, options);
   const policy = options.policy || createPolicy(env);
   const encode = encodeURIComponent;
+
+  /**
+   * The branch Vercel deploys to Production for this project: the gateway's
+   * configured branch when set, otherwise the branch linked to the project
+   * upstream. `null` means it could not be determined.
+   *
+   * The project is only read when the request actually names a branch, so a
+   * file-upload deployment (which may legitimately create a new project) still
+   * needs no project lookup.
+   */
+  const productionBranchOf = async (body) => {
+    const configured = policy.configuredProductionBranch();
+    if (configured) return configured;
+
+    const project = body.project || body.name;
+    if (!project) return null;
+
+    const record = await client.request('GET', `/v9/projects/${encode(project)}`);
+    return record && record.link ? record.link.productionBranch : null;
+  };
 
   const list = (payload, key, mapper) => {
     const values = Array.isArray(payload) ? payload : payload && payload[key] ? payload[key] : [];
@@ -92,51 +103,33 @@ function createService(options = {}) {
       return serializer.deployment(await client.request('GET', `/v13/deployments/${encode(deployment)}`));
     },
     async createDeployment(input) {
-      const requestedTarget = input.target || 'preview';
-      const projectRef = input.project || input.name;
-
       if (input.project) policy.assertProjectAllowed(input.project);
-      if (requestedTarget === 'production') {
-        policy.requireProductionApproval(input.approval, `deployment for ${projectRef}`);
+
+      const target = policy.normalizeDeploymentTarget(input.target);
+      if (target === 'production') {
+        policy.requireProductionApproval(input.approval, `deployment for ${input.project || input.name}`);
       }
 
-      if (requestedTarget === 'preview') {
-        const gitRef = input.gitSource && input.gitSource.ref;
-        if (!gitRef) {
-          throw new ValidationError('A Git source ref is required for a Preview deployment.');
+      const body = { ...input };
+      delete body.approval;
+      // Vercel rejects `target: 'preview'`: upstream, omitting the field is what
+      // makes a deployment a Preview. `production` is the only value we forward.
+      delete body.target;
+      if (target === 'production') body.target = 'production';
+
+      if (target === 'preview') {
+        const branches = policy.deploymentBranches(body);
+        policy.assertPreviewBranchNamed(body, branches);
+        if (branches.length > 0) {
+          policy.assertPreviewBranchAllowed(branches, await productionBranchOf(body));
         }
-
-        if (projectRef) {
-          const project = await client.request('GET', `/v9/projects/${encode(projectRef)}`);
-          const productionBranch = getProductionBranch(project);
-          if (productionBranch && gitRef === productionBranch) {
-            throw new VercelForbiddenError(
-              'Preview deployments must use a branch different from the project production branch.',
-              [{ project: projectRef, gitRef, productionBranch }]
-            );
-          }
-        }
       }
 
-      const { approval, ...body } = input;
-      if (requestedTarget === 'preview') delete body.target;
-
-      const deployment = await client.request('POST', '/v13/deployments', { body });
-      const returnedTarget = getDeploymentTarget(deployment);
-
-      if (requestedTarget === 'preview' && returnedTarget === 'production') {
-        throw new VercelForbiddenError(
-          'Preview was requested but Vercel returned a Production deployment.',
-          [{
-            deploymentId: deployment.uid || deployment.id || null,
-            requestedTarget,
-            returnedTarget,
-            gitRef: body.gitSource && body.gitSource.ref,
-          }]
-        );
-      }
-
-      return serializer.deployment(deployment);
+      const payload = await client.request('POST', '/v13/deployments', { body });
+      // Omitting the target is necessary but not sufficient, so the result is
+      // verified before it is reported as a Preview deployment.
+      if (target === 'preview') policy.assertPreviewDeploymentResult(payload);
+      return serializer.deployment(payload);
     },
     async cancelDeployment({ deployment }) {
       return serializer.deployment(await client.request('PATCH', `/v12/deployments/${encode(deployment)}/cancel`));

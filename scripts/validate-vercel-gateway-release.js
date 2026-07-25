@@ -8,6 +8,7 @@ const PRODUCTION_URL = 'https://context-api-3b9dfadf403e.herokuapp.com';
 const ROUTE_PREFIX = '/api/v1/vercel';
 const ROUTES_FILE = 'src/routes/v1/vercel.js';
 const SERVICE_FILE = 'src/services/vercel.service.js';
+const POLICY_FILE = 'src/services/vercelPolicy.js';
 
 // A GPT Builder Action schema may declare at most 30 operations, which is why the Vercel
 // contract is published as two disjoint schemas instead of one.
@@ -25,7 +26,7 @@ const REQUIRED_FILES = [
   'src/controllers/vercel.controller.js',
   SERVICE_FILE,
   'src/services/vercelClient.js',
-  'src/services/vercelPolicy.js',
+  POLICY_FILE,
   'src/services/vercelErrors.js',
   'src/services/vercelLogs.service.js',
   'src/services/vercelRedaction.js',
@@ -447,14 +448,44 @@ function validateVercelActionRelease(options = {}) {
     if (/getProjectEnv|decrypt/i.test(service)) {
       fail('service must not include decrypted environment-variable reads');
     }
-    if (!service.includes("body.target = 'preview'")) {
-      fail('deployment creation must default to Preview');
+    // Vercel's create-deployment endpoint rejects the literal `preview` target;
+    // upstream, a Preview deployment is one that omits `target` entirely.
+    if (/body\.target\s*=\s*'preview'/.test(service)) {
+      fail("deployment creation must not forward the literal target 'preview' to Vercel");
+    }
+    if (!service.includes('normalizeDeploymentTarget')) {
+      fail('deployment creation must resolve its target through gateway policy');
+    }
+    if (!service.includes('assertPreviewBranchNamed')) {
+      fail('Preview deployment creation must require a Git-connected request to name its branch');
+    }
+    if (!service.includes('assertPreviewBranchAllowed')) {
+      fail('Preview deployment creation must refuse the configured production branch');
+    }
+    if (!service.includes('assertPreviewDeploymentResult')) {
+      fail('Preview deployment creation must verify the upstream deployment is not Production');
     }
     if (!service.includes('requireProductionApproval')) {
       fail('production approval policy is not enforced');
     }
     if (!service.includes('requireDestructiveConfirmation')) {
       fail('destructive confirmation policy is not enforced');
+    }
+  }
+
+  const policy = read(POLICY_FILE);
+  if (policy) {
+    // The service checks above only prove the calls are made; these prove the
+    // safeguards they call still exist server-side.
+    for (const symbol of [
+      'normalizeDeploymentTarget',
+      'assertPreviewBranchNamed',
+      'assertPreviewBranchAllowed',
+      'assertPreviewDeploymentResult',
+    ]) {
+      if (!policy.includes(`function ${symbol}`)) {
+        fail(`${POLICY_FILE} must define ${symbol}`);
+      }
     }
   }
 
@@ -483,9 +514,11 @@ module.exports = {
   CORE_SCHEMA,
   DESTRUCTIVE_OPERATIONS,
   MAX_OPERATIONS_PER_SCHEMA,
+  POLICY_FILE,
   PRODUCTION_OPERATIONS,
   PRODUCTION_URL,
   SCHEMA_FILES,
+  SERVICE_FILE,
   contractEntries,
   extractBlock,
   parseImplementedRoutes,

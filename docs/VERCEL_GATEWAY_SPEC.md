@@ -434,6 +434,46 @@ When `target` is omitted, deployment creation defaults to `preview`.
 
 A Production target requires a valid production approval object.
 
+`preview` is the gateway's vocabulary, not Vercel's. `POST /v13/deployments` has no `preview`
+target value and rejects the literal string, so the gateway translates:
+
+| Requested target | Sent upstream |
+| --- | --- |
+| omitted or `preview` | no `target` field at all |
+| `production` | `target: "production"` (approval required) |
+
+Any other value is a `400`. A Preview response reports `"target": "preview"` even though Vercel
+returns `target: null`, so a caller never has to infer the environment.
+
+### 13.1.1 Preview deployments and the production branch
+
+Vercel deploys the project's production branch to Production regardless of the requested target, so
+a Preview request that names that branch would become an unapproved production release. The gateway
+therefore refuses it with `403 VERCEL_FORBIDDEN` before any upstream write.
+
+A Preview request that names a Git source must also name the branch to deploy. Omitting the ref does
+not mean "no branch": it lets Vercel choose, and Vercel chooses the production branch. That request is
+a `400 VALIDATION_ERROR`. File uploads and redeploys of an existing deployment name no Git source and
+are unaffected, as are Production requests, which are approval-gated instead.
+
+The production branch is `VERCEL_PRODUCTION_BRANCH` when configured, otherwise the project's linked
+`productionBranch` read from Vercel. The project is only read when the request actually names a
+branch — in `gitSource.ref`, `gitSource.branch`, `gitMetadata.commitRef`, `meta.githubCommitRef`, or
+`branch` — so a file-upload deployment costs no extra upstream call. Comparison ignores a
+`refs/heads/` prefix and letter case.
+
+Requesting `target: "production"` on that same branch stays available with explicit production
+approval. Nothing about the Production path changes.
+
+### 13.1.2 Preview result verification
+
+Omitting `target` is necessary but not sufficient: project settings, custom environments, or an
+upstream contract change can still produce a Production deployment. The gateway inspects the created
+deployment and, when it reports `target: "production"` or `production: true` for a Preview request,
+fails with `409 VERCEL_CONFLICT` naming the deployment identifier so the caller can cancel or delete
+it. The gateway does not issue that write itself, because cancelling is a caller decision and a
+silent cleanup would hide the event.
+
 ### 13.2 Deployment status
 
 Normalize upstream lifecycle states to:

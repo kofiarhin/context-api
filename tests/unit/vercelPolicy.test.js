@@ -1,7 +1,19 @@
 'use strict';
 
-const { createPolicy, requireProductionApproval } = require('../../src/services/vercelPolicy');
-const { VercelForbiddenError } = require('../../src/utils/errors');
+const {
+  assertPreviewBranchAllowed,
+  assertPreviewBranchNamed,
+  assertPreviewDeploymentResult,
+  createPolicy,
+  deploymentBranches,
+  normalizeDeploymentTarget,
+  requireProductionApproval,
+} = require('../../src/services/vercelPolicy');
+const {
+  ValidationError,
+  VercelConflictError,
+  VercelForbiddenError,
+} = require('../../src/utils/errors');
 
 const source = {
   VERCEL_TOKEN: 'vercel-token-for-tests',
@@ -58,6 +70,89 @@ describe('Vercel gateway policy', () => {
         { resourceType: 'project', resourceId: 'prj_123' }
       )
     ).toThrow(VercelForbiddenError);
+  });
+
+  it('defaults an absent deployment target to preview', () => {
+    expect(normalizeDeploymentTarget(undefined)).toBe('preview');
+    expect(normalizeDeploymentTarget(null)).toBe('preview');
+    expect(normalizeDeploymentTarget('')).toBe('preview');
+    expect(normalizeDeploymentTarget(' Preview ')).toBe('preview');
+    expect(normalizeDeploymentTarget('PRODUCTION')).toBe('production');
+  });
+
+  it('rejects any deployment target outside the gateway vocabulary', () => {
+    expect(() => normalizeDeploymentTarget('staging')).toThrow(ValidationError);
+    expect(() => normalizeDeploymentTarget(['preview'])).toThrow(ValidationError);
+    expect(() => normalizeDeploymentTarget(true)).toThrow(ValidationError);
+  });
+
+  it('reads every branch a deployment body can name', () => {
+    expect(
+      deploymentBranches({
+        gitSource: { ref: 'refs/heads/feature/menu' },
+        meta: { githubCommitRef: 'feature/menu' },
+        gitMetadata: { commitRef: 'other' },
+      })
+    ).toEqual(['feature/menu', 'other']);
+
+    expect(deploymentBranches({})).toEqual([]);
+    expect(deploymentBranches({ gitSource: { ref: '  ' } })).toEqual([]);
+  });
+
+  it('requires a Git-connected Preview deployment to name its branch', () => {
+    expect(() => assertPreviewBranchNamed({ gitSource: { type: 'github', repo: 'shop' } }, [])).toThrow(
+      ValidationError
+    );
+    expect(() => assertPreviewBranchNamed({ gitMetadata: { commitSha: 'abc123' } }, [])).toThrow(
+      ValidationError
+    );
+  });
+
+  it('requires no branch from a deployment that names no Git source', () => {
+    // File uploads and redeploys of an existing deployment have no branch to name.
+    expect(() => assertPreviewBranchNamed({ files: [] }, [])).not.toThrow();
+    expect(() => assertPreviewBranchNamed({ deploymentId: 'dpl_1' }, [])).not.toThrow();
+    expect(() =>
+      assertPreviewBranchNamed({ gitSource: { ref: 'feature/menu' } }, ['feature/menu'])
+    ).not.toThrow();
+  });
+
+  it('refuses a Preview deployment on the production branch', () => {
+    expect(() => assertPreviewBranchAllowed(['main'], 'main')).toThrow(VercelForbiddenError);
+    expect(() => assertPreviewBranchAllowed(['MAIN'], 'refs/heads/main')).toThrow(
+      VercelForbiddenError
+    );
+    expect(() => assertPreviewBranchAllowed(['feature/menu'], 'main')).not.toThrow();
+  });
+
+  it('cannot refuse a branch when the production branch is unknown', () => {
+    expect(() => assertPreviewBranchAllowed(['main'], null)).not.toThrow();
+    expect(() => assertPreviewBranchAllowed(['main'], '')).not.toThrow();
+  });
+
+  it('exposes the configured production branch to the service', () => {
+    expect(policy.configuredProductionBranch()).toBeNull();
+    expect(
+      createPolicy(
+        {},
+        { source: { ...source, VERCEL_PRODUCTION_BRANCH: ' refs/heads/main ' } }
+      ).configuredProductionBranch()
+    ).toBe('main');
+  });
+
+  it('rejects an upstream deployment that came back as Production', () => {
+    expect(() => assertPreviewDeploymentResult({ uid: 'dpl_1', target: 'production' })).toThrow(
+      VercelConflictError
+    );
+    expect(() => assertPreviewDeploymentResult({ uid: 'dpl_1', production: true })).toThrow(
+      VercelConflictError
+    );
+  });
+
+  it('accepts an upstream deployment that is not Production', () => {
+    expect(() => assertPreviewDeploymentResult({ uid: 'dpl_1', target: null })).not.toThrow();
+    expect(() => assertPreviewDeploymentResult({ uid: 'dpl_1', target: 'staging' })).not.toThrow();
+    expect(() => assertPreviewDeploymentResult({})).not.toThrow();
   });
 
   it('never permits destructive operations when disabled', () => {
