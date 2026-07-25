@@ -14,6 +14,27 @@ beforeAll(async () => {
   app = buildTestApp();
   await clearTestDb();
   await seedTestData();
+
+  // The shipped Ideas Hub project catalogue intentionally contains only fields
+  // available in PROJECTS.md, so stack and milestone arrays may be empty. These
+  // endpoint tests need explicit data for filtering and nested-field assertions
+  // rather than depending on the current shape of generated production seeds.
+  await Project.updateOne(
+    { projectId: 'context-api' },
+    {
+      $set: {
+        technologyStack: ['node.js', 'express', 'mongodb'],
+        milestones: [
+          {
+            key: 'test-verification',
+            title: 'Verify the Context API project endpoint',
+            status: 'completed',
+            targetDate: null,
+          },
+        ],
+      },
+    }
+  );
 });
 
 afterAll(async () => {
