@@ -2,6 +2,7 @@
 
 const { ValidationError } = require('../utils/errors');
 const vercelService = require('./vercel.service');
+const { createService: createDeploymentService } = require('./vercelDeployment.service');
 const vercelLogsService = require('./vercelLogs.service');
 
 const CATALOG = Object.freeze({
@@ -26,7 +27,7 @@ const CATALOG = Object.freeze({
     updateProject: { service: 'vercel', method: 'updateProject' },
     pauseProject: { service: 'vercel', method: 'pauseProject' },
     unpauseProject: { service: 'vercel', method: 'unpauseProject' },
-    createDeployment: { service: 'vercel', method: 'createDeployment', status: 201 },
+    createDeployment: { service: 'deployments', method: 'createDeployment', status: 201 },
     cancelDeployment: { service: 'vercel', method: 'cancelDeployment' },
     promoteDeployment: { service: 'vercel', method: 'promoteDeployment' },
     rollbackProject: { service: 'vercel', method: 'rollbackProject' },
@@ -75,6 +76,7 @@ function normalizeInput(input) {
 function createDispatcher(options = {}) {
   const services = {
     vercel: options.vercelService || vercelService,
+    deployments: options.vercelDeploymentService || createDeploymentService(options),
     logs: options.vercelLogsService || vercelLogsService,
   };
 
