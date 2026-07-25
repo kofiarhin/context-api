@@ -11,6 +11,13 @@ function parseBoolean(raw) {
   return String(raw || '').toLowerCase() === 'true';
 }
 
+function parseBranch(raw) {
+  const branch = String(raw || '')
+    .trim()
+    .replace(/^refs\/heads\//, '');
+  return branch === '' ? null : branch;
+}
+
 function getVercelConfig(baseEnv = {}, source = process.env) {
   const token = source.VERCEL_TOKEN || baseEnv.vercelToken || null;
   const key = source.ZORO_VERCEL_API_KEY || baseEnv.zoroVercelApiKey || null;
@@ -39,10 +46,17 @@ function getVercelConfig(baseEnv = {}, source = process.env) {
     vercelProjectAllowlist: split(source.VERCEL_PROJECT_ALLOWLIST || baseEnv.vercelProjectAllowlist),
     vercelDomainAllowlist: split(source.VERCEL_DOMAIN_ALLOWLIST || baseEnv.vercelDomainAllowlist),
     vercelRepositoryAllowlist: split(source.VERCEL_REPOSITORY_ALLOWLIST || baseEnv.vercelRepositoryAllowlist),
+    // The branch Vercel deploys to Production. Optional: when it is unset the
+    // gateway reads the project's linked production branch instead. Like the
+    // allowlists it does not make the gateway "configured", so setting it alone
+    // cannot fail startup.
+    vercelProductionBranch: parseBranch(
+      source.VERCEL_PRODUCTION_BRANCH || baseEnv.vercelProductionBranch
+    ),
     vercelAllowDestructiveOperations: parseBoolean(
       source.VERCEL_ALLOW_DESTRUCTIVE_OPERATIONS ?? baseEnv.vercelAllowDestructiveOperations
     ),
   });
 }
 
-module.exports = { getVercelConfig, split, parseBoolean };
+module.exports = { getVercelConfig, split, parseBoolean, parseBranch };

@@ -11,6 +11,26 @@ function createService(options = {}) {
   const policy = options.policy || createPolicy(env);
   const encode = encodeURIComponent;
 
+  /**
+   * The branch Vercel deploys to Production for this project: the gateway's
+   * configured branch when set, otherwise the branch linked to the project
+   * upstream. `null` means it could not be determined.
+   *
+   * The project is only read when the request actually names a branch, so a
+   * file-upload deployment (which may legitimately create a new project) still
+   * needs no project lookup.
+   */
+  const productionBranchOf = async (body) => {
+    const configured = policy.configuredProductionBranch();
+    if (configured) return configured;
+
+    const project = body.project || body.name;
+    if (!project) return null;
+
+    const record = await client.request('GET', `/v9/projects/${encode(project)}`);
+    return record && record.link ? record.link.productionBranch : null;
+  };
+
   const list = (payload, key, mapper) => {
     const values = Array.isArray(payload) ? payload : payload && payload[key] ? payload[key] : [];
     return {
@@ -84,10 +104,32 @@ function createService(options = {}) {
     },
     async createDeployment(input) {
       if (input.project) policy.assertProjectAllowed(input.project);
-      if (input.target === 'production') policy.requireProductionApproval(input.approval, `deployment for ${input.project || input.name}`);
-      const { approval, ...body } = input;
-      if (!body.target) body.target = 'preview';
-      return serializer.deployment(await client.request('POST', '/v13/deployments', { body }));
+
+      const target = policy.normalizeDeploymentTarget(input.target);
+      if (target === 'production') {
+        policy.requireProductionApproval(input.approval, `deployment for ${input.project || input.name}`);
+      }
+
+      const body = { ...input };
+      delete body.approval;
+      // Vercel rejects `target: 'preview'`: upstream, omitting the field is what
+      // makes a deployment a Preview. `production` is the only value we forward.
+      delete body.target;
+      if (target === 'production') body.target = 'production';
+
+      if (target === 'preview') {
+        const branches = policy.deploymentBranches(body);
+        policy.assertPreviewBranchNamed(body, branches);
+        if (branches.length > 0) {
+          policy.assertPreviewBranchAllowed(branches, await productionBranchOf(body));
+        }
+      }
+
+      const payload = await client.request('POST', '/v13/deployments', { body });
+      // Omitting the target is necessary but not sufficient, so the result is
+      // verified before it is reported as a Preview deployment.
+      if (target === 'preview') policy.assertPreviewDeploymentResult(payload);
+      return serializer.deployment(payload);
     },
     async cancelDeployment({ deployment }) {
       return serializer.deployment(await client.request('PATCH', `/v12/deployments/${encode(deployment)}/cancel`));

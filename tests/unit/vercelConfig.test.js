@@ -21,6 +21,28 @@ describe('Vercel gateway configuration', () => {
     expect(config.vercelAllowDestructiveOperations).toBe(true);
   });
 
+  it('reads the optional production branch without making it mandatory', () => {
+    expect(
+      getVercelConfig(
+        {},
+        {
+          VERCEL_TOKEN: 'token',
+          ZORO_VERCEL_API_KEY: 'a'.repeat(32),
+          VERCEL_PRODUCTION_BRANCH: ' main ',
+        }
+      ).vercelProductionBranch
+    ).toBe('main');
+
+    expect(
+      getVercelConfig({}, { VERCEL_TOKEN: 'token', ZORO_VERCEL_API_KEY: 'a'.repeat(32) })
+        .vercelProductionBranch
+    ).toBeNull();
+  });
+
+  it('treats a production branch alone as unconfigured rather than a partial gateway', () => {
+    expect(() => getVercelConfig({}, { VERCEL_PRODUCTION_BRANCH: 'main' })).not.toThrow();
+  });
+
   it('fails closed for partial configuration without echoing values', () => {
     expect(() =>
       getVercelConfig({}, { VERCEL_TOKEN: 'secret-token-value' })

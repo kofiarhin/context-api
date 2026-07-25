@@ -4,9 +4,13 @@ info:
   version: 1.0.0
   description: >-
     Governed Vercel account, project, and deployment operations through the Context API.
-    Deployments are created as Preview by default. Production-affecting operations require an
-    explicit approval payload and destructive operations require an exact confirmation payload.
-    Environment-variable values are never returned by any operation.
+    Deployments are created as Preview by default: send no target, or "preview". A Git-connected
+    Preview deployment must name the branch to deploy in gitSource.ref, and that branch must not be
+    the project's production branch, because Vercel would deploy it to Production; use a feature
+    branch, or request target "production" with approval.
+    Production-affecting operations require an explicit approval payload and destructive operations
+    require an exact confirmation payload. Environment-variable values are never returned by any
+    operation.
 servers:
   - url: https://context-api-3b9dfadf403e.herokuapp.com
 security:

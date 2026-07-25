@@ -436,6 +436,8 @@ Deployment creation defaults to:
 
 Omitting `target` must never create or promote Production. Supplying `target: "production"` requires a valid production approval object.
 
+`preview` is the gateway contract only. Vercel's `POST /v13/deployments` rejects the literal value, so the service omits `target` entirely for a Preview deployment and sends `target: "production"` only for an approved Production request. A Preview request must additionally be refused when it names the production branch (`VERCEL_PRODUCTION_BRANCH`, else the project's linked `productionBranch`), and the created deployment must be verified as non-Production before it is returned. See SPEC §13.1.
+
 ### 6.5 Production approval
 
 Production-sensitive requests must include:

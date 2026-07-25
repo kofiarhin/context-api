@@ -6,9 +6,11 @@ const path = require('node:path');
 const {
   DESTRUCTIVE_OPERATIONS,
   MAX_OPERATIONS_PER_SCHEMA,
+  POLICY_FILE,
   PRODUCTION_OPERATIONS,
   PRODUCTION_URL,
   SCHEMA_FILES,
+  SERVICE_FILE,
   extractBlock,
   parseImplementedRoutes,
   parseSchemaOperations,
@@ -451,5 +453,41 @@ describe('Vercel Action release validation rules', () => {
     expect(validateVercelActionRelease({ files: { [CORE_FILE]: null } })).toContain(
       `missing required file ${CORE_FILE}`
     );
+  });
+
+  it('rejects a service that forwards the literal preview target to Vercel', () => {
+    // The upstream create-deployment contract has no `preview` value and rejects
+    // it, so reintroducing the assignment must fail the release gate.
+    const service = `${read(SERVICE_FILE)}\n// regression: body.target = 'preview';\n`;
+
+    expect(validateVercelActionRelease({ files: { [SERVICE_FILE]: service } })).toContain(
+      "deployment creation must not forward the literal target 'preview' to Vercel"
+    );
+  });
+
+  it('rejects a service that stops resolving the deployment target through policy', () => {
+    expect(patch(SERVICE_FILE, [['normalizeDeploymentTarget', 'trustTheCaller']])).toContain(
+      'deployment creation must resolve its target through gateway policy'
+    );
+  });
+
+  it('rejects a service that stops guarding the production branch', () => {
+    expect(patch(SERVICE_FILE, [['assertPreviewBranchAllowed', 'ignoreBranch']])).toContain(
+      'Preview deployment creation must refuse the configured production branch'
+    );
+  });
+
+  it('rejects a service that trusts the upstream deployment target', () => {
+    expect(patch(SERVICE_FILE, [['assertPreviewDeploymentResult', 'ignoreResult']])).toContain(
+      'Preview deployment creation must verify the upstream deployment is not Production'
+    );
+  });
+
+  it('rejects a policy that drops a Preview safeguard', () => {
+    expect(
+      patch(POLICY_FILE, [
+        ['function assertPreviewDeploymentResult', 'function checkPreviewDeploymentResult'],
+      ])
+    ).toContain(`${POLICY_FILE} must define assertPreviewDeploymentResult`);
   });
 });

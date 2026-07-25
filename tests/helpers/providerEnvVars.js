@@ -39,6 +39,7 @@ const VERCEL_ENV_VARS = [
   'VERCEL_PROJECT_ALLOWLIST', // allowlist
   'VERCEL_DOMAIN_ALLOWLIST', // allowlist
   'VERCEL_REPOSITORY_ALLOWLIST', // allowlist
+  'VERCEL_PRODUCTION_BRANCH', // Preview deployment guardrail
   'VERCEL_ALLOW_DESTRUCTIVE_OPERATIONS', // feature switch
 ];
 

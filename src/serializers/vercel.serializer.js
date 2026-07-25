@@ -58,7 +58,11 @@ function deployment(value = {}) {
     url: value.url,
     projectId: value.projectId,
     state: value.state || value.readyState,
-    target: value.target,
+    // Vercel reports a Preview deployment as `target: null`, because its create
+    // endpoint has no `preview` value to send or return. Name it explicitly so a
+    // response always states the environment (SPEC §13.3); a payload that carries
+    // no target at all still gets none invented for it.
+    target: value.target === null ? 'preview' : value.target,
     createdAt: value.createdAt,
     buildingAt: value.buildingAt,
     ready: value.ready,
