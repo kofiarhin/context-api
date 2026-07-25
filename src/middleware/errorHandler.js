@@ -5,6 +5,7 @@ const { buildErrorBody } = require('../utils/responses');
 const {
   AppError,
   ValidationError,
+  PayloadTooLargeError,
   ConflictError,
   DatabaseUnavailableError,
   InternalServerError,
@@ -71,7 +72,7 @@ function translate(error) {
   }
 
   if (error.type === 'entity.too.large') {
-    return new ValidationError('Request validation failed.', [
+    return new PayloadTooLargeError('Request body exceeds the configured size limit.', [
       {
         field: 'body',
         message: 'Request body exceeds the configured size limit.',
