@@ -78,7 +78,7 @@ function createService(options = {}) {
         );
       }
 
-      return serializer.deployment(created);
+      return serializer.deployment({ ...created, target: returnedTarget });
     },
   });
 }
