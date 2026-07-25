@@ -1,10 +1,34 @@
 'use strict';
 
 const { AppError, ValidationError } = require('../../utils/errors');
+const { getZoroEngineeringConfig } = require('../../config/zoroEngineering');
 const { APPROVAL_REQUIRED, CLASSIFICATIONS } = require('./zoroCatalogue');
 
 const MIN_REASON_LENGTH = 8;
 const APPROVER = 'Kofi';
+
+/**
+ * Classifications Full Operator mode may proceed on without per-request
+ * approval.
+ *
+ * The standing authority is the deployment itself: enabling the mode is the
+ * approval, so re-stating it on every call adds ceremony rather than control.
+ *
+ * `DESTRUCTIVE` is deliberately absent. Destructive work stays separately
+ * controlled in every mode — it continues to require both explicit Kofi
+ * approval and an exact confirmation naming the resource, because the failure
+ * mode there is unrecoverable rather than merely unintended.
+ */
+const FULL_OPERATOR_AUTO_ALLOWED = Object.freeze(
+  new Set([
+    CLASSIFICATIONS.WRITE,
+    CLASSIFICATIONS.MERGE,
+    CLASSIFICATIONS.PRODUCTION_SENSITIVE,
+    CLASSIFICATIONS.SECURITY_SENSITIVE,
+    CLASSIFICATIONS.BILLING,
+    CLASSIFICATIONS.ACCESS_ADMIN,
+  ])
+);
 
 /**
  * Approval fields the dispatcher understands.
@@ -31,8 +55,13 @@ function isNonEmptyString(value, minLength = 1) {
  * approver, state the authority the approval rests on, and give a substantive
  * reason — a blank or one-word reason is treated as no approval at all, because
  * the audit trail is the point.
+ *
+ * Under Full Operator mode the approval *requirement* is stood down for the
+ * classifications in FULL_OPERATOR_AUTO_ALLOWED. The shape of a supplied
+ * approval block is still validated first, so a typo'd field is still a 400 in
+ * either mode rather than silently ignored.
  */
-function requireKofiApproval(approval, classification) {
+function requireKofiApproval(approval, classification, options = {}) {
   if (
     approval !== undefined &&
     (!approval || typeof approval !== 'object' || Array.isArray(approval))
@@ -46,6 +75,10 @@ function requireKofiApproval(approval, classification) {
         throw new ValidationError(`Unknown approval field: ${key}.`);
       }
     }
+  }
+
+  if (options.fullOperatorMode && FULL_OPERATOR_AUTO_ALLOWED.has(classification)) {
+    return;
   }
 
   if (!APPROVAL_REQUIRED.has(classification)) {
@@ -197,9 +230,16 @@ function expectedConfirmation(operation, parameters = {}) {
  * Context API self-protection) is deliberately *not* reimplemented here. Those
  * checks run inside the services this dispatcher delegates to, and there is no
  * parameter on this path that can skip them.
+ *
+ * Full Operator mode changes exactly one of these guards — whether per-request
+ * Kofi approval is demanded. The expected-state check and the destructive
+ * confirmation run identically in both modes, and the mode is read from
+ * configuration rather than from the request, so no caller can assert it.
  */
-function enforce({ operation, parameters, approval, confirmation }) {
-  requireKofiApproval(approval, operation.classification);
+function enforce({ operation, parameters, approval, confirmation, source = process.env }) {
+  const { fullOperatorMode } = getZoroEngineeringConfig(source);
+
+  requireKofiApproval(approval, operation.classification, { fullOperatorMode });
   requireExpectedState(operation, parameters);
 
   if (operation.classification === CLASSIFICATIONS.DESTRUCTIVE) {
@@ -218,4 +258,5 @@ module.exports = {
   MIN_REASON_LENGTH,
   APPROVAL_FIELDS,
   CONFIRMATION_FIELDS,
+  FULL_OPERATOR_AUTO_ALLOWED,
 };

@@ -1,6 +1,7 @@
 'use strict';
 
 const { getVercelConfig, parseBranch } = require('../config/vercel');
+const { getZoroEngineeringConfig } = require('../config/zoroEngineering');
 const { ValidationError, VercelConflictError, VercelForbiddenError } = require('../utils/errors');
 
 // The gateway's own deployment vocabulary. `preview` is deliberately not part of
@@ -180,7 +181,9 @@ function assertEnvironmentValueInput(input) {
 }
 
 function createPolicy(baseEnv = {}, options = {}) {
-  const env = getVercelConfig(baseEnv, options.source || process.env);
+  const source = options.source || process.env;
+  const env = getVercelConfig(baseEnv, source);
+  const { fullOperatorMode } = getZoroEngineeringConfig(source);
   const projectAllowlist = normalizeList(env.vercelProjectAllowlist);
   const domainAllowlist = normalizeList(env.vercelDomainAllowlist);
   const repositoryAllowlist = normalizeList(env.vercelRepositoryAllowlist);
@@ -195,7 +198,17 @@ function createPolicy(baseEnv = {}, options = {}) {
     assertRepositoryAllowed(repository) {
       assertAllowed(repository, repositoryAllowlist, 'Repository');
     },
-    requireProductionApproval,
+    // Full Operator mode stands down the per-request Production approval only.
+    // Every other Production guard is untouched: project, repository, and domain
+    // allowlists still apply, the destructive switch and its exact confirmation
+    // still apply, and the Preview protections below — a Git ref is required,
+    // the ref may not be the production branch, `target` is omitted so Vercel
+    // creates a genuine Preview, and the returned deployment is verified — run
+    // identically, so a Preview still cannot silently become a Production.
+    requireProductionApproval(approval, resource) {
+      if (fullOperatorMode) return;
+      requireProductionApproval(approval, resource);
+    },
     requireDestructiveConfirmation(confirmation, expected) {
       requireDestructiveConfirmation(env, confirmation, expected);
     },

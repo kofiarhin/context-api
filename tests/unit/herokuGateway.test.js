@@ -23,6 +23,10 @@ const source = {
   HEROKU_BILLING_OPERATIONS_ENABLED: 'true',
   HEROKU_ACCESS_ADMIN_OPERATIONS_ENABLED: 'true',
   HEROKU_PRIVATE_SPACE_OPERATIONS_ENABLED: 'true',
+  // Pinned explicitly: Full Operator mode defaults to enabled, and these cases
+  // assert the restricted-mode approval requirement. The Full Operator
+  // behaviour is covered separately in tests/unit/zoroFullOperator.test.js.
+  ZORO_FULL_OPERATOR_MODE: 'false',
 };
 
 const approval = {

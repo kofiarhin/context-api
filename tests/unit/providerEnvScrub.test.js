@@ -111,6 +111,10 @@ describe('provider env allowlist stays in sync with the config loaders', () => {
     'src/config/vercel.js',
     'src/config/heroku.js',
     'src/config/engineering.js',
+    // The unified dispatcher's own config loader. It was missing from this list,
+    // so the switches it reads were invisible to the drift check in both
+    // directions.
+    'src/config/zoroEngineering.js',
     'src/middleware/requireGithubRepositoryAccess.js',
   ];
 

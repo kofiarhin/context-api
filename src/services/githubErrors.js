@@ -47,12 +47,21 @@ function statusOf(error) {
   return null;
 }
 
+// GitHub's own credential formats. Personal access tokens, App user tokens,
+// installation tokens, OAuth tokens, refresh tokens, and fine-grained PATs.
+const GITHUB_CREDENTIAL = /\b(gh[pusor]_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{16,})\b/g;
+
 /**
  * Extracts a short, non-sensitive reason from an upstream error.
  *
  * Only GitHub's own top-level message is considered, and it is length-capped.
  * Nested `errors[]` entries and response bodies are ignored because they can
  * echo submitted content.
+ *
+ * Anything token-shaped is redacted before the reason is returned. GitHub does
+ * not normally echo a credential in a top-level message, but this is the one
+ * upstream string the gateway does forward to a caller, and the cost of the
+ * guarantee is a regex.
  */
 function safeReason(error) {
   const message = typeof error.message === 'string' ? error.message : '';
@@ -64,7 +73,9 @@ function safeReason(error) {
 
   // Octokit appends the request URL to some messages; drop anything after it so
   // an authenticated URL cannot ride along.
-  return firstLine.split(' - http')[0].trim() || null;
+  const withoutUrl = firstLine.split(' - http')[0].trim();
+
+  return withoutUrl.replace(GITHUB_CREDENTIAL, '[REDACTED]') || null;
 }
 
 function looksLikeConflict(error) {

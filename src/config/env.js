@@ -182,6 +182,58 @@ function loadGithubConfig(source, { isProduction }, problems) {
 }
 
 /**
+ * Account-level repository creation.
+ *
+ * Deliberately a separate group from GITHUB_VARIABLES. Those are all-or-nothing
+ * because the App credentials are useless individually, whereas repository
+ * creation is an opt-in capability layered on top: leaving it disabled must not
+ * make GITHUB_USER_ACCESS_TOKEN required. Enabling it validates the whole set at
+ * startup so a missing token fails the boot rather than the first call.
+ *
+ * The owner has no default. Falling back to a hard-coded account would silently
+ * widen access if the variable were ever dropped, so it must be stated
+ * explicitly; the documented value lives in .env.example.
+ */
+function loadGithubRepositoryCreationConfig(source, problems) {
+  const raw = source.GITHUB_REPOSITORY_CREATION_ENABLED;
+  let githubRepositoryCreationEnabled = false;
+
+  if (raw !== undefined && raw !== '') {
+    if (raw === true || raw === 'true') {
+      githubRepositoryCreationEnabled = true;
+    } else if (raw === false || raw === 'false') {
+      githubRepositoryCreationEnabled = false;
+    } else {
+      problems.push('GITHUB_REPOSITORY_CREATION_ENABLED must be true or false.');
+    }
+  }
+
+  const githubAllowedOwner = source.GITHUB_ALLOWED_OWNER
+    ? String(source.GITHUB_ALLOWED_OWNER).trim().toLowerCase()
+    : null;
+
+  const githubUserAccessToken = source.GITHUB_USER_ACCESS_TOKEN
+    ? String(source.GITHUB_USER_ACCESS_TOKEN)
+    : null;
+
+  if (githubRepositoryCreationEnabled) {
+    if (!githubAllowedOwner) {
+      problems.push(
+        'GITHUB_ALLOWED_OWNER is required when GITHUB_REPOSITORY_CREATION_ENABLED is true.'
+      );
+    }
+
+    if (!githubUserAccessToken) {
+      problems.push(
+        'GITHUB_USER_ACCESS_TOKEN is required when GITHUB_REPOSITORY_CREATION_ENABLED is true.'
+      );
+    }
+  }
+
+  return { githubRepositoryCreationEnabled, githubAllowedOwner, githubUserAccessToken };
+}
+
+/**
  * Validates a raw environment source and returns a frozen configuration object.
  *
  * Throws a single error listing every problem. Error messages deliberately name
@@ -238,6 +290,7 @@ function loadEnv(source = process.env) {
   }
 
   const github = loadGithubConfig(source, { isProduction: nodeEnv === 'production' }, problems);
+  const githubRepositoryCreation = loadGithubRepositoryCreationConfig(source, problems);
 
   if (problems.length > 0) {
     throw new Error(`Invalid environment configuration:\n- ${problems.join('\n- ')}`);
@@ -254,6 +307,7 @@ function loadEnv(source = process.env) {
     isProduction: nodeEnv === 'production',
     isTest: nodeEnv === 'test',
     ...github,
+    ...githubRepositoryCreation,
   });
 }
 

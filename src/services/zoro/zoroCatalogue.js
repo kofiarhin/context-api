@@ -158,6 +158,17 @@ const GITHUB_READ_OPERATIONS = Object.freeze({
 });
 
 const GITHUB_WRITE_OPERATIONS = Object.freeze({
+  // Classified security-sensitive rather than write: it is the only operation
+  // that uses the account-level user token instead of the App installation, and
+  // it creates a persistent account-level resource. In restricted mode that
+  // keeps it behind explicit Kofi approval; Full Operator mode stands that
+  // approval down, but never the owner allowlist or the enabled switch.
+  createRepository: {
+    target: 'github',
+    method: 'createRepository',
+    status: 201,
+    classification: CLASSIFICATIONS.SECURITY_SENSITIVE,
+  },
   createBranch: {
     target: 'github',
     method: 'createBranch',
