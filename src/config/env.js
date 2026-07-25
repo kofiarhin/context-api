@@ -1,6 +1,10 @@
 'use strict';
 
-require('dotenv').config();
+// dotenv is intentionally NOT loaded here. Keeping it out of this module means
+// loadEnv() stays a pure parser of whatever source it is handed, so the test
+// suite never inherits a developer's local .env provider credentials. Runtime
+// entrypoints load the .env file explicitly via config/loadDotenv before
+// reading configuration.
 
 const VALID_NODE_ENVS = ['development', 'test', 'production'];
 const VALID_LOG_LEVELS = ['error', 'warn', 'info', 'debug'];
