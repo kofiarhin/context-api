@@ -37,9 +37,11 @@ describe('Vercel client', () => {
   });
 
   it('translates upstream errors without preserving arbitrary secret fields', async () => {
-    const fetchImpl = jest.fn().mockResolvedValue(
-      response(403, { error: { code: 'forbidden', message: 'Denied', token: 'leak-me' } })
-    );
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValue(
+        response(403, { error: { code: 'forbidden', message: 'Denied', token: 'leak-me' } })
+      );
     const client = createVercelClient({}, { source, fetchImpl });
 
     await expect(client.request('GET', '/v2/user')).rejects.toMatchObject({

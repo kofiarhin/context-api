@@ -1,6 +1,11 @@
 'use strict';
 
-const { sendCollection, sendResource, buildErrorBody, buildPaginationMeta } = require('../../src/utils/responses');
+const {
+  sendCollection,
+  sendResource,
+  buildErrorBody,
+  buildPaginationMeta,
+} = require('../../src/utils/responses');
 
 function mockResponse() {
   const res = {};
@@ -72,14 +77,24 @@ describe('response envelopes', () => {
   });
 
   it('omits an empty details array from the error envelope', () => {
-    const body = buildErrorBody({ code: 'INTERNAL_SERVER_ERROR', message: 'x', details: [], correlationId: 'c' });
+    const body = buildErrorBody({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'x',
+      details: [],
+      correlationId: 'c',
+    });
 
     expect(body.error).not.toHaveProperty('details');
   });
 
   it('includes details when present', () => {
     const details = [{ field: 'page', message: 'Value must be an integer.' }];
-    const body = buildErrorBody({ code: 'VALIDATION_ERROR', message: 'x', details, correlationId: 'c' });
+    const body = buildErrorBody({
+      code: 'VALIDATION_ERROR',
+      message: 'x',
+      details,
+      correlationId: 'c',
+    });
 
     expect(body.error.details).toEqual(details);
   });

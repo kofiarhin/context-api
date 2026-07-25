@@ -40,8 +40,12 @@ describe('Heroku gateway', () => {
     const config = getHerokuConfig({}, source);
     expect(config.herokuSelfApp).toBe('context-api');
     expect(config.herokuAppAllowlist).toEqual(['context-api', 'disposable-app']);
-    expect(() => getHerokuConfig({}, { HEROKU_API_TOKEN: 'super-secret' })).toThrow('ZORO_HEROKU_API_KEY is required');
-    expect(() => getHerokuConfig({}, { HEROKU_API_TOKEN: 'super-secret' })).not.toThrow('super-secret');
+    expect(() => getHerokuConfig({}, { HEROKU_API_TOKEN: 'super-secret' })).toThrow(
+      'ZORO_HEROKU_API_KEY is required'
+    );
+    expect(() => getHerokuConfig({}, { HEROKU_API_TOKEN: 'super-secret' })).not.toThrow(
+      'super-secret'
+    );
   });
 
   test('compares bearer credentials safely', () => {
@@ -55,32 +59,96 @@ describe('Heroku gateway', () => {
   });
 
   test('blocks self deletion, scale-to-zero, and required config removal', () => {
-    expect(() => policy.enforce({ input: { app: 'context-api', approval }, descriptor: descriptor('deleteHerokuApp'), source })).toThrow('cannot delete');
-    expect(() => policy.enforce({ input: { app: 'context-api', type: 'web', body: { quantity: 0 }, approval }, descriptor: descriptor('updateHerokuFormation'), source })).toThrow('scaled to zero');
-    expect(() => policy.enforce({ input: { app: 'context-api', key: 'HEROKU_API_TOKEN', approval }, descriptor: descriptor('deleteHerokuConfigVar'), source })).toThrow('cannot be removed');
-    expect(() => policy.enforce({ input: { app: 'context-api', body: { MONGODB_URI: null }, approval }, descriptor: descriptor('updateHerokuConfigVars'), source })).toThrow('cannot be cleared');
+    expect(() =>
+      policy.enforce({
+        input: { app: 'context-api', approval },
+        descriptor: descriptor('deleteHerokuApp'),
+        source,
+      })
+    ).toThrow('cannot delete');
+    expect(() =>
+      policy.enforce({
+        input: { app: 'context-api', type: 'web', body: { quantity: 0 }, approval },
+        descriptor: descriptor('updateHerokuFormation'),
+        source,
+      })
+    ).toThrow('scaled to zero');
+    expect(() =>
+      policy.enforce({
+        input: { app: 'context-api', key: 'HEROKU_API_TOKEN', approval },
+        descriptor: descriptor('deleteHerokuConfigVar'),
+        source,
+      })
+    ).toThrow('cannot be removed');
+    expect(() =>
+      policy.enforce({
+        input: { app: 'context-api', body: { MONGODB_URI: null }, approval },
+        descriptor: descriptor('updateHerokuConfigVars'),
+        source,
+      })
+    ).toThrow('cannot be cleared');
   });
 
   test('blocks non-allowlisted resources and unapproved sensitive operations', () => {
-    expect(() => policy.enforce({ input: { app: 'unknown' }, descriptor: descriptor('getHerokuApp'), source })).toThrow('not allowlisted');
-    expect(() => policy.enforce({ input: { app: 'disposable-app', body: { quantity: 2 } }, descriptor: descriptor('updateHerokuFormation'), source })).toThrow('approval evidence');
-    expect(() => policy.enforce({ input: { app: 'disposable-app', body: { hostname: 'bad.invalid' }, approval }, descriptor: descriptor('createHerokuDomain'), source })).toThrow('domain is not allowlisted');
+    expect(() =>
+      policy.enforce({ input: { app: 'unknown' }, descriptor: descriptor('getHerokuApp'), source })
+    ).toThrow('not allowlisted');
+    expect(() =>
+      policy.enforce({
+        input: { app: 'disposable-app', body: { quantity: 2 } },
+        descriptor: descriptor('updateHerokuFormation'),
+        source,
+      })
+    ).toThrow('approval evidence');
+    expect(() =>
+      policy.enforce({
+        input: { app: 'disposable-app', body: { hostname: 'bad.invalid' }, approval },
+        descriptor: descriptor('createHerokuDomain'),
+        source,
+      })
+    ).toThrow('domain is not allowlisted');
   });
 
   test('redacts config values and filters collection reads', () => {
-    expect(policy.redactConfigVars({ NODE_ENV: 'production', PUBLIC_URL: 'https://example.com', MONGODB_URI: 'mongodb://secret' })).toEqual([
+    expect(
+      policy.redactConfigVars({
+        NODE_ENV: 'production',
+        PUBLIC_URL: 'https://example.com',
+        MONGODB_URI: 'mongodb://secret',
+      })
+    ).toEqual([
       { key: 'NODE_ENV', configured: true, sensitive: false, value: 'production' },
       { key: 'PUBLIC_URL', configured: true, sensitive: true, value: '[REDACTED]' },
       { key: 'MONGODB_URI', configured: true, sensitive: true, value: '[REDACTED]' },
     ]);
     const config = getHerokuConfig({}, source);
-    expect(policy.filterCollection('listHerokuApps', [{ name: 'context-api' }, { name: 'private-app' }], config)).toEqual([{ name: 'context-api' }]);
+    expect(
+      policy.filterCollection(
+        'listHerokuApps',
+        [{ name: 'context-api' }, { name: 'private-app' }],
+        config
+      )
+    ).toEqual([{ name: 'context-api' }]);
   });
 
   test('removes gateway control fields and normalizes special request bodies', () => {
-    expect(service.sanitizeBody({ name: 'app', expectedEtag: 'etag', approval })).toEqual({ name: 'app' });
-    expect(service.pathFor('/apps/{app}/dynos/{dyno}', { app: 'my app', dyno: 'web.1' })).toBe('/apps/my%20app/dynos/web.1');
-    expect(service.requestBody(descriptor('deleteHerokuConfigVar'), { params: { key: 'OLD_KEY' }, body: {} })).toEqual({ OLD_KEY: null });
-    expect(service.requestBody(descriptor('rollbackHerokuRelease'), { params: { release: 'v42' }, body: {} })).toEqual({ release: 'v42' });
+    expect(service.sanitizeBody({ name: 'app', expectedEtag: 'etag', approval })).toEqual({
+      name: 'app',
+    });
+    expect(service.pathFor('/apps/{app}/dynos/{dyno}', { app: 'my app', dyno: 'web.1' })).toBe(
+      '/apps/my%20app/dynos/web.1'
+    );
+    expect(
+      service.requestBody(descriptor('deleteHerokuConfigVar'), {
+        params: { key: 'OLD_KEY' },
+        body: {},
+      })
+    ).toEqual({ OLD_KEY: null });
+    expect(
+      service.requestBody(descriptor('rollbackHerokuRelease'), {
+        params: { release: 'v42' },
+        body: {},
+      })
+    ).toEqual({ release: 'v42' });
   });
 });

@@ -46,8 +46,7 @@ function getZoroEngineeringConfig(source = process.env) {
   }
 
   const repositoryAllowlist = parseAllowlist(
-    source.ZORO_ENGINEERING_REPOSITORY_ALLOWLIST ||
-      source.GITHUB_REPOSITORY_ALLOWLIST
+    source.ZORO_ENGINEERING_REPOSITORY_ALLOWLIST || source.GITHUB_REPOSITORY_ALLOWLIST
   );
 
   return Object.freeze({

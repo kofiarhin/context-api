@@ -31,9 +31,7 @@ function validateIdentifierParam(raw, field) {
   }
 
   if (value.length > MAX_IDENTIFIER_LENGTH) {
-    fail([
-      { field, message: `Identifier must not exceed ${MAX_IDENTIFIER_LENGTH} characters.` },
-    ]);
+    fail([{ field, message: `Identifier must not exceed ${MAX_IDENTIFIER_LENGTH} characters.` }]);
   }
 
   if (!IDENTIFIER.test(value)) {

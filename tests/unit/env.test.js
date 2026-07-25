@@ -78,8 +78,6 @@ describe('loadEnv', () => {
 
   it('rejects out-of-range rate limit configuration', () => {
     expect(() => loadEnv({ ...VALID, RATE_LIMIT_MAX: '0' })).toThrow(/RATE_LIMIT_MAX/);
-    expect(() => loadEnv({ ...VALID, RATE_LIMIT_WINDOW_MS: '10' })).toThrow(
-      /RATE_LIMIT_WINDOW_MS/
-    );
+    expect(() => loadEnv({ ...VALID, RATE_LIMIT_WINDOW_MS: '10' })).toThrow(/RATE_LIMIT_WINDOW_MS/);
   });
 });

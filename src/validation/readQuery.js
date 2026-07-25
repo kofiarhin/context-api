@@ -137,24 +137,11 @@ function validateReadQuery(query, fieldSpecs) {
   }
 
   const page = parsePage(query.page, details);
-  const pageSize = parseInteger(
-    query.pageSize,
-    'pageSize',
-    PAGINATION_DEFAULTS.pageSize,
-    details
-  );
-  const limit = parseInteger(
-    query.limit,
-    'limit',
-    PAGINATION_DEFAULTS.pageSize,
-    details
-  );
+  const pageSize = parseInteger(query.pageSize, 'pageSize', PAGINATION_DEFAULTS.pageSize, details);
+  const limit = parseInteger(query.limit, 'limit', PAGINATION_DEFAULTS.pageSize, details);
   const cursor = parseSingleString(query.cursor, 'cursor', details);
 
-  if (
-    cursor !== undefined &&
-    (cursor.length > MAX_CURSOR_LENGTH || !CURSOR_PATTERN.test(cursor))
-  ) {
+  if (cursor !== undefined && (cursor.length > MAX_CURSOR_LENGTH || !CURSOR_PATTERN.test(cursor))) {
     details.push({ field: 'cursor', message: 'Cursor is invalid.' });
   }
 
@@ -168,17 +155,8 @@ function validateReadQuery(query, fieldSpecs) {
     });
   }
 
-  const includeTotal = parseBoolean(
-    query.includeTotal,
-    'includeTotal',
-    !cursorMode,
-    details
-  );
-  const updatedAfterRaw = parseSingleString(
-    query.updatedAfter,
-    'updatedAfter',
-    details
-  );
+  const includeTotal = parseBoolean(query.includeTotal, 'includeTotal', !cursorMode, details);
+  const updatedAfterRaw = parseSingleString(query.updatedAfter, 'updatedAfter', details);
   let updatedAfter = null;
 
   if (updatedAfterRaw !== undefined) {

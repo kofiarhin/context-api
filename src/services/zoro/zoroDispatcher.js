@@ -240,7 +240,9 @@ async function runContextRead(operationName, { parameters, pagination }) {
   const { filters, pagination: normalized } = definition.validator(toQuery(parameters, pagination));
   const outcome = await definition.list(filters, normalized);
   const serializer =
-    normalized.view === 'summary' ? definition.summary || definition.serializer : definition.serializer;
+    normalized.view === 'summary'
+      ? definition.summary || definition.serializer
+      : definition.serializer;
   const mode = outcome.mode || normalized.mode;
 
   return {
@@ -350,7 +352,9 @@ async function runOperation(operation, request, services) {
         toQuery(request.parameters, request.pagination)
       );
 
-      return { result: serializeResolvedContext(await services.contextResolver.resolveContext(filters)) };
+      return {
+        result: serializeResolvedContext(await services.contextResolver.resolveContext(filters)),
+      };
     }
 
     case 'contextRead':

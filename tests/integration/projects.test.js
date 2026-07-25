@@ -70,9 +70,7 @@ describe('GET /api/v1/projects', () => {
     const response = await request(app).get('/api/v1/projects?technology=express');
 
     expect(response.body.data.length).toBeGreaterThan(0);
-    response.body.data.forEach((project) =>
-      expect(project.technologyStack).toContain('express')
-    );
+    response.body.data.forEach((project) => expect(project.technologyStack).toContain('express'));
   });
 
   it('combines filters', async () => {
@@ -98,13 +96,17 @@ describe('GET /api/v1/projects', () => {
 
   describe('updatedAfter', () => {
     it('returns projects updated after a past timestamp', async () => {
-      const response = await request(app).get('/api/v1/projects?updatedAfter=2000-01-01T00:00:00.000Z');
+      const response = await request(app).get(
+        '/api/v1/projects?updatedAfter=2000-01-01T00:00:00.000Z'
+      );
 
       expect(response.body.data.length).toBeGreaterThan(0);
     });
 
     it('returns nothing for a future timestamp', async () => {
-      const response = await request(app).get('/api/v1/projects?updatedAfter=2999-01-01T00:00:00.000Z');
+      const response = await request(app).get(
+        '/api/v1/projects?updatedAfter=2999-01-01T00:00:00.000Z'
+      );
 
       expect(response.body.data).toEqual([]);
     });

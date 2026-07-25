@@ -78,14 +78,14 @@ The implementation must preserve the following current architecture and conventi
 
 ### 3.1 Runtime and module conventions
 
-| Concern | Current evidence | Vercel implementation requirement |
-| --- | --- | --- |
-| Runtime | `package.json` declares Node.js `24.x`. | Use Node.js 24 global `fetch` unless an SDK is separately justified and approved. |
-| Modules | Source files use CommonJS and `'use strict'`. | New files must use CommonJS and existing import/export style. |
-| Web framework | `package.json` uses Express 5. | Add an Express router under the existing application factory. |
-| Application factory | `src/app.js` exports `createApp(options)` for in-process tests. | Mount the Vercel router through `createApp`; support injected test configuration. |
-| Process startup | `src/server.js` validates environment, connects to MongoDB, then listens. | Preserve process-level MongoDB startup behavior unless a separate architecture change is approved. |
-| Request-time database independence | `src/app.js` mounts `/api/v1/github` before `requireDatabase`. | Mount `/api/v1/vercel` before the database-backed router so Vercel requests do not pass through `requireDatabase`. |
+| Concern                            | Current evidence                                                          | Vercel implementation requirement                                                                                  |
+| ---------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Runtime                            | `package.json` declares Node.js `24.x`.                                   | Use Node.js 24 global `fetch` unless an SDK is separately justified and approved.                                  |
+| Modules                            | Source files use CommonJS and `'use strict'`.                             | New files must use CommonJS and existing import/export style.                                                      |
+| Web framework                      | `package.json` uses Express 5.                                            | Add an Express router under the existing application factory.                                                      |
+| Application factory                | `src/app.js` exports `createApp(options)` for in-process tests.           | Mount the Vercel router through `createApp`; support injected test configuration.                                  |
+| Process startup                    | `src/server.js` validates environment, connects to MongoDB, then listens. | Preserve process-level MongoDB startup behavior unless a separate architecture change is approved.                 |
+| Request-time database independence | `src/app.js` mounts `/api/v1/github` before `requireDatabase`.            | Mount `/api/v1/vercel` before the database-backed router so Vercel requests do not pass through `requireDatabase`. |
 
 ### 3.2 Middleware and request lifecycle
 
@@ -301,53 +301,53 @@ Classification meanings:
 - **Destructive** — deletes or irreversibly detaches a resource; requires global enablement, exact confirmation, allowlist match, and expected-state verification where possible.
 - **Prohibited** — not exposed in the first release or excluded by specification.
 
-| Resource area | Operation or capability | Classification | Initial delivery status |
-| --- | --- | --- | --- |
-| Identity | Read current user metadata | Read-only | Phase 4 |
-| Teams | List/read configured or allowlisted teams | Read-only | Phase 4 |
-| Teams | Invite/remove members, change roles, delete team | Prohibited | Never in this specification |
-| Projects | List/read projects and safe settings | Read-only | Phase 4 |
-| Projects | Create project | Normal write | Phase 7 |
-| Projects | Connect approved Git repository | Normal write | Phase 7 |
-| Projects | Update non-production settings | Normal write | Phase 7 |
-| Projects | Change production branch, framework, build/install commands, output directory, or root directory for a production project | Production-sensitive | Phase 10 |
-| Projects | Pause/unpause non-production project | Normal write | Phase 7, only if confirmed upstream |
-| Projects | Pause/unpause production project | Production-sensitive | Phase 10, only if confirmed upstream |
-| Projects | Delete project | Destructive | Phase 10 |
-| Deployments | List/read status and metadata | Read-only | Phase 4 |
-| Deployment diagnostics | Read bounded events, files, and redacted logs | Read-only | Phase 5 |
-| Deployments | Create Git-connected Preview deployment | Normal write | Phase 6 |
-| Deployments | Create Production deployment | Production-sensitive | Phase 10 |
-| Deployments | Cancel non-production deployment | Normal write | Phase 6 |
-| Deployments | Cancel production-targeted deployment | Production-sensitive | Phase 10 |
-| Deployments | Promote to Production | Production-sensitive | Phase 10 |
-| Deployments | Roll back Production | Production-sensitive | Phase 10 |
-| Deployments | Delete deployment | Destructive | Phase 10 |
-| Deployments | Direct file-upload deployment | Prohibited | First release |
-| Environment variables | List metadata without decrypted values | Read-only | Phase 4 |
-| Environment variables | Create/update Development or Preview variable | Normal write | Phase 8 |
-| Environment variables | Create/update Production variable | Production-sensitive | Phase 10 |
-| Environment variables | Delete variable | Destructive | Phase 10 |
-| Environment variables | Retrieve decrypted value | Prohibited | Never in this specification |
-| Project domains | List/read domain metadata | Read-only | Phase 4 |
-| Project domains | Add approved domain without moving production traffic | Normal write | Phase 9 |
-| Project domains | Verify, redirect, move, or update production domain | Production-sensitive | Phase 10 |
-| Project domains | Remove domain | Destructive | Phase 10 |
-| Account domains | List/read/configuration inspection | Read-only | Phase 4 |
-| Account domains | Add/update domain | Production-sensitive | Disabled until Phase 9/10 policy and tests pass |
-| Account domains | Remove domain | Destructive | Phase 10 |
-| DNS | List DNS metadata | Read-only | Phase 4 |
-| DNS | Create/update approved record | Production-sensitive | Disabled until Phase 9/10 policy and tests pass |
-| DNS | Delete record | Destructive | Phase 10 |
-| Aliases | List/read aliases | Read-only | Phase 4 |
-| Aliases | Create preview/non-production alias | Normal write | Phase 9 |
-| Aliases | Create/update alias affecting Production traffic | Production-sensitive | Phase 10 |
-| Aliases | Remove alias | Destructive | Phase 10 |
-| Git linkage | Inspect Git repository linkage | Read-only | Phase 4 |
-| Git linkage | Link approved `owner/repo` | Normal write | Phase 7 |
-| Git linkage | Broaden GitHub App permissions or create repositories | Prohibited | Separate GitHub authority required |
-| Account administration | Billing, invoices, marketplace, tokens, certificates/private keys, transfers, firewall/protection bypass | Prohibited | Never in this specification |
-| Generic access | Caller-controlled Vercel method, path, URL, or arbitrary proxy | Prohibited | Never |
+| Resource area          | Operation or capability                                                                                                   | Classification       | Initial delivery status                         |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------- | ----------------------------------------------- |
+| Identity               | Read current user metadata                                                                                                | Read-only            | Phase 4                                         |
+| Teams                  | List/read configured or allowlisted teams                                                                                 | Read-only            | Phase 4                                         |
+| Teams                  | Invite/remove members, change roles, delete team                                                                          | Prohibited           | Never in this specification                     |
+| Projects               | List/read projects and safe settings                                                                                      | Read-only            | Phase 4                                         |
+| Projects               | Create project                                                                                                            | Normal write         | Phase 7                                         |
+| Projects               | Connect approved Git repository                                                                                           | Normal write         | Phase 7                                         |
+| Projects               | Update non-production settings                                                                                            | Normal write         | Phase 7                                         |
+| Projects               | Change production branch, framework, build/install commands, output directory, or root directory for a production project | Production-sensitive | Phase 10                                        |
+| Projects               | Pause/unpause non-production project                                                                                      | Normal write         | Phase 7, only if confirmed upstream             |
+| Projects               | Pause/unpause production project                                                                                          | Production-sensitive | Phase 10, only if confirmed upstream            |
+| Projects               | Delete project                                                                                                            | Destructive          | Phase 10                                        |
+| Deployments            | List/read status and metadata                                                                                             | Read-only            | Phase 4                                         |
+| Deployment diagnostics | Read bounded events, files, and redacted logs                                                                             | Read-only            | Phase 5                                         |
+| Deployments            | Create Git-connected Preview deployment                                                                                   | Normal write         | Phase 6                                         |
+| Deployments            | Create Production deployment                                                                                              | Production-sensitive | Phase 10                                        |
+| Deployments            | Cancel non-production deployment                                                                                          | Normal write         | Phase 6                                         |
+| Deployments            | Cancel production-targeted deployment                                                                                     | Production-sensitive | Phase 10                                        |
+| Deployments            | Promote to Production                                                                                                     | Production-sensitive | Phase 10                                        |
+| Deployments            | Roll back Production                                                                                                      | Production-sensitive | Phase 10                                        |
+| Deployments            | Delete deployment                                                                                                         | Destructive          | Phase 10                                        |
+| Deployments            | Direct file-upload deployment                                                                                             | Prohibited           | First release                                   |
+| Environment variables  | List metadata without decrypted values                                                                                    | Read-only            | Phase 4                                         |
+| Environment variables  | Create/update Development or Preview variable                                                                             | Normal write         | Phase 8                                         |
+| Environment variables  | Create/update Production variable                                                                                         | Production-sensitive | Phase 10                                        |
+| Environment variables  | Delete variable                                                                                                           | Destructive          | Phase 10                                        |
+| Environment variables  | Retrieve decrypted value                                                                                                  | Prohibited           | Never in this specification                     |
+| Project domains        | List/read domain metadata                                                                                                 | Read-only            | Phase 4                                         |
+| Project domains        | Add approved domain without moving production traffic                                                                     | Normal write         | Phase 9                                         |
+| Project domains        | Verify, redirect, move, or update production domain                                                                       | Production-sensitive | Phase 10                                        |
+| Project domains        | Remove domain                                                                                                             | Destructive          | Phase 10                                        |
+| Account domains        | List/read/configuration inspection                                                                                        | Read-only            | Phase 4                                         |
+| Account domains        | Add/update domain                                                                                                         | Production-sensitive | Disabled until Phase 9/10 policy and tests pass |
+| Account domains        | Remove domain                                                                                                             | Destructive          | Phase 10                                        |
+| DNS                    | List DNS metadata                                                                                                         | Read-only            | Phase 4                                         |
+| DNS                    | Create/update approved record                                                                                             | Production-sensitive | Disabled until Phase 9/10 policy and tests pass |
+| DNS                    | Delete record                                                                                                             | Destructive          | Phase 10                                        |
+| Aliases                | List/read aliases                                                                                                         | Read-only            | Phase 4                                         |
+| Aliases                | Create preview/non-production alias                                                                                       | Normal write         | Phase 9                                         |
+| Aliases                | Create/update alias affecting Production traffic                                                                          | Production-sensitive | Phase 10                                        |
+| Aliases                | Remove alias                                                                                                              | Destructive          | Phase 10                                        |
+| Git linkage            | Inspect Git repository linkage                                                                                            | Read-only            | Phase 4                                         |
+| Git linkage            | Link approved `owner/repo`                                                                                                | Normal write         | Phase 7                                         |
+| Git linkage            | Broaden GitHub App permissions or create repositories                                                                     | Prohibited           | Separate GitHub authority required              |
+| Account administration | Billing, invoices, marketplace, tokens, certificates/private keys, transfers, firewall/protection bypass                  | Prohibited           | Never in this specification                     |
+| Generic access         | Caller-controlled Vercel method, path, URL, or arbitrary proxy                                                            | Prohibited           | Never                                           |
 
 ## 6. Security and approval model
 
@@ -557,25 +557,25 @@ Common errors across protected routes:
 
 ### 7.1 Identity and teams
 
-| Method | Route | Operation ID | Purpose and request | Class | Success | Approval |
-| --- | --- | --- | --- | --- | ---: | --- |
-| GET | `/user` | `getVercelUser` | Read normalized current-user metadata. No body. | Read-only | 200 | Clear inspection request |
-| GET | `/teams` | `listVercelTeams` | List configured/allowlisted teams with bounded pagination. | Read-only | 200 | Clear inspection request |
-| GET | `/teams/:teamId` | `getVercelTeam` | Read one team after configured-scope validation. | Read-only | 200 | Clear inspection request |
+| Method | Route            | Operation ID      | Purpose and request                                        | Class     | Success | Approval                 |
+| ------ | ---------------- | ----------------- | ---------------------------------------------------------- | --------- | ------: | ------------------------ |
+| GET    | `/user`          | `getVercelUser`   | Read normalized current-user metadata. No body.            | Read-only |     200 | Clear inspection request |
+| GET    | `/teams`         | `listVercelTeams` | List configured/allowlisted teams with bounded pagination. | Read-only |     200 | Clear inspection request |
+| GET    | `/teams/:teamId` | `getVercelTeam`   | Read one team after configured-scope validation.           | Read-only |     200 | Clear inspection request |
 
 Specific errors: team not allowed `403`; unknown team `404`; pagination validation `400`.
 
 ### 7.2 Projects
 
-| Method | Route | Operation ID | Purpose and request | Class | Success | Approval |
-| --- | --- | --- | --- | --- | ---: | --- |
-| GET | `/projects` | `listVercelProjects` | List normalized projects; query supports bounded pagination and safe filters. | Read-only | 200 | Inspection |
-| POST | `/projects` | `createVercelProject` | Create a bounded project definition; optional approved Git linkage and non-production settings. | Normal write | 201 | Concrete project creation |
-| GET | `/projects/:projectIdOrName` | `getVercelProject` | Read project, safe build settings, Git linkage, and current deployment metadata. | Read-only | 200 | Inspection |
-| PATCH | `/projects/:projectIdOrName` | `updateVercelProject` | Patch an allowlisted field set. Classification is derived from fields and current production use. | Normal or Production-sensitive | 200 | Concrete mutation; production approval for production-affecting fields |
-| DELETE | `/projects/:projectIdOrName` | `deleteVercelProject` | Delete exact project after current-state match. | Destructive | 200 | Exact destructive confirmation and global enablement |
-| POST | `/projects/:projectIdOrName/pause` | `pauseVercelProject` | Pause project only if current upstream contract supports it. | Normal or Production-sensitive | 200 | Concrete request; production approval when serving Production |
-| POST | `/projects/:projectIdOrName/unpause` | `unpauseVercelProject` | Unpause project only if current upstream contract supports it. | Normal or Production-sensitive | 200 | Concrete request; production approval when serving Production |
+| Method | Route                                | Operation ID           | Purpose and request                                                                               | Class                          | Success | Approval                                                               |
+| ------ | ------------------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------ | ------: | ---------------------------------------------------------------------- |
+| GET    | `/projects`                          | `listVercelProjects`   | List normalized projects; query supports bounded pagination and safe filters.                     | Read-only                      |     200 | Inspection                                                             |
+| POST   | `/projects`                          | `createVercelProject`  | Create a bounded project definition; optional approved Git linkage and non-production settings.   | Normal write                   |     201 | Concrete project creation                                              |
+| GET    | `/projects/:projectIdOrName`         | `getVercelProject`     | Read project, safe build settings, Git linkage, and current deployment metadata.                  | Read-only                      |     200 | Inspection                                                             |
+| PATCH  | `/projects/:projectIdOrName`         | `updateVercelProject`  | Patch an allowlisted field set. Classification is derived from fields and current production use. | Normal or Production-sensitive |     200 | Concrete mutation; production approval for production-affecting fields |
+| DELETE | `/projects/:projectIdOrName`         | `deleteVercelProject`  | Delete exact project after current-state match.                                                   | Destructive                    |     200 | Exact destructive confirmation and global enablement                   |
+| POST   | `/projects/:projectIdOrName/pause`   | `pauseVercelProject`   | Pause project only if current upstream contract supports it.                                      | Normal or Production-sensitive |     200 | Concrete request; production approval when serving Production          |
+| POST   | `/projects/:projectIdOrName/unpause` | `unpauseVercelProject` | Unpause project only if current upstream contract supports it.                                    | Normal or Production-sensitive |     200 | Concrete request; production approval when serving Production          |
 
 Create/update body fields must be explicitly allowlisted and may include project name, framework enum, build/install/output/root settings, production branch, and Git repository reference only when approved. Unsupported upstream properties are rejected.
 
@@ -583,18 +583,18 @@ Specific errors: ambiguous name `409`; duplicate project `409`; repository not a
 
 ### 7.3 Deployments and diagnostics
 
-| Method | Route | Operation ID | Purpose and request | Class | Success | Approval |
-| --- | --- | --- | --- | --- | ---: | --- |
-| GET | `/deployments` | `listVercelDeployments` | List deployments with bounded project, state, target, time, and cursor filters. | Read-only | 200 | Inspection |
-| POST | `/deployments` | `createVercelDeployment` | Create Git-connected deployment. `target` defaults to `preview`; include project/repository/branch/ref fields supported by current API. | Normal or Production-sensitive | 201 | Concrete Preview request; production approval for Production target |
-| GET | `/deployments/:deploymentIdOrUrl` | `getVercelDeployment` | Read normalized deployment state, target, URL, timing, and Git metadata. | Read-only | 200 | Inspection |
-| PATCH | `/deployments/:deploymentId/cancel` | `cancelVercelDeployment` | Cancel an active deployment after current-state read. | Normal or Production-sensitive | 200 | Concrete request; production approval when production-targeted |
-| DELETE | `/deployments/:deploymentId` | `deleteVercelDeployment` | Delete exact deployment after expected-state confirmation. | Destructive | 200 | Exact destructive confirmation and global enablement |
-| GET | `/deployments/:deploymentId/events` | `getVercelDeploymentEvents` | Return bounded normalized deployment events. | Read-only | 200 | Inspection |
-| GET | `/deployments/:deploymentId/files` | `listVercelDeploymentFiles` | Return bounded file metadata, never arbitrary file content unless separately approved. | Read-only | 200 | Inspection |
-| GET | `/deployments/:deploymentId/logs` | `getVercelDeploymentLogs` | Return bounded, truncated, redacted logs for a validated window/cursor. | Read-only | 200 | Inspection; diagnostic sensitivity acknowledged |
-| POST | `/deployments/:deploymentId/promote` | `promoteVercelDeployment` | Promote exact ready deployment to Production after current production read. | Production-sensitive | 200 | Explicit production approval naming project and deployment |
-| POST | `/projects/:projectIdOrName/rollback` | `rollbackVercelProject` | Roll back to an explicitly selected prior deployment or approved upstream recovery target. | Production-sensitive | 200 | Explicit production approval and expected current production ID |
+| Method | Route                                 | Operation ID                | Purpose and request                                                                                                                     | Class                          | Success | Approval                                                            |
+| ------ | ------------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ | ------: | ------------------------------------------------------------------- |
+| GET    | `/deployments`                        | `listVercelDeployments`     | List deployments with bounded project, state, target, time, and cursor filters.                                                         | Read-only                      |     200 | Inspection                                                          |
+| POST   | `/deployments`                        | `createVercelDeployment`    | Create Git-connected deployment. `target` defaults to `preview`; include project/repository/branch/ref fields supported by current API. | Normal or Production-sensitive |     201 | Concrete Preview request; production approval for Production target |
+| GET    | `/deployments/:deploymentIdOrUrl`     | `getVercelDeployment`       | Read normalized deployment state, target, URL, timing, and Git metadata.                                                                | Read-only                      |     200 | Inspection                                                          |
+| PATCH  | `/deployments/:deploymentId/cancel`   | `cancelVercelDeployment`    | Cancel an active deployment after current-state read.                                                                                   | Normal or Production-sensitive |     200 | Concrete request; production approval when production-targeted      |
+| DELETE | `/deployments/:deploymentId`          | `deleteVercelDeployment`    | Delete exact deployment after expected-state confirmation.                                                                              | Destructive                    |     200 | Exact destructive confirmation and global enablement                |
+| GET    | `/deployments/:deploymentId/events`   | `getVercelDeploymentEvents` | Return bounded normalized deployment events.                                                                                            | Read-only                      |     200 | Inspection                                                          |
+| GET    | `/deployments/:deploymentId/files`    | `listVercelDeploymentFiles` | Return bounded file metadata, never arbitrary file content unless separately approved.                                                  | Read-only                      |     200 | Inspection                                                          |
+| GET    | `/deployments/:deploymentId/logs`     | `getVercelDeploymentLogs`   | Return bounded, truncated, redacted logs for a validated window/cursor.                                                                 | Read-only                      |     200 | Inspection; diagnostic sensitivity acknowledged                     |
+| POST   | `/deployments/:deploymentId/promote`  | `promoteVercelDeployment`   | Promote exact ready deployment to Production after current production read.                                                             | Production-sensitive           |     200 | Explicit production approval naming project and deployment          |
+| POST   | `/projects/:projectIdOrName/rollback` | `rollbackVercelProject`     | Roll back to an explicitly selected prior deployment or approved upstream recovery target.                                              | Production-sensitive           |     200 | Explicit production approval and expected current production ID     |
 
 Normalized deployment states are `queued`, `building`, `ready`, `failed`, `canceled`, and `unknown`. Create returns initial state and URL; callers poll the read endpoint at a bounded interval and stop on terminal state.
 
@@ -602,25 +602,25 @@ Specific errors: target not approved `409`; deployment not ready `409`; stale cu
 
 ### 7.4 Environment-variable metadata and mutations
 
-| Method | Route | Operation ID | Purpose and request | Class | Success | Approval |
-| --- | --- | --- | --- | --- | ---: | --- |
-| GET | `/projects/:projectIdOrName/environment-variables` | `listVercelEnvironmentVariables` | List metadata only; never decrypted values. | Read-only | 200 | Inspection |
-| POST | `/projects/:projectIdOrName/environment-variables` | `createVercelEnvironmentVariable` | Create one variable with key, immediate value, type, targets, and optional branch targeting. | Normal or Production-sensitive | 201 | Concrete Preview/Development write; production approval for Production target |
-| PATCH | `/projects/:projectIdOrName/environment-variables/:variableId` | `updateVercelEnvironmentVariable` | Update metadata and optionally replace immediate value without echoing it. | Normal or Production-sensitive | 200 | Concrete Preview/Development write; production approval for Production target |
-| DELETE | `/projects/:projectIdOrName/environment-variables/:variableId` | `deleteVercelEnvironmentVariable` | Delete exact variable after metadata re-read and confirmation. | Destructive | 200 | Exact destructive confirmation and global enablement |
+| Method | Route                                                          | Operation ID                      | Purpose and request                                                                          | Class                          | Success | Approval                                                                      |
+| ------ | -------------------------------------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------ | ------: | ----------------------------------------------------------------------------- |
+| GET    | `/projects/:projectIdOrName/environment-variables`             | `listVercelEnvironmentVariables`  | List metadata only; never decrypted values.                                                  | Read-only                      |     200 | Inspection                                                                    |
+| POST   | `/projects/:projectIdOrName/environment-variables`             | `createVercelEnvironmentVariable` | Create one variable with key, immediate value, type, targets, and optional branch targeting. | Normal or Production-sensitive |     201 | Concrete Preview/Development write; production approval for Production target |
+| PATCH  | `/projects/:projectIdOrName/environment-variables/:variableId` | `updateVercelEnvironmentVariable` | Update metadata and optionally replace immediate value without echoing it.                   | Normal or Production-sensitive |     200 | Concrete Preview/Development write; production approval for Production target |
+| DELETE | `/projects/:projectIdOrName/environment-variables/:variableId` | `deleteVercelEnvironmentVariable` | Delete exact variable after metadata re-read and confirmation.                               | Destructive                    |     200 | Exact destructive confirmation and global enablement                          |
 
 Specific errors: duplicate key/target conflict `409`; invalid target/type `400`; value in query `400`; attempted decrypted read `404` or `422` because no such route exists.
 
 ### 7.5 Project domains
 
-| Method | Route | Operation ID | Purpose and request | Class | Success | Approval |
-| --- | --- | --- | --- | --- | ---: | --- |
-| GET | `/projects/:projectIdOrName/domains` | `listVercelProjectDomains` | List normalized project-domain metadata. | Read-only | 200 | Inspection |
-| POST | `/projects/:projectIdOrName/domains` | `addVercelProjectDomain` | Add allowlisted domain without moving Production traffic by default. | Normal or Production-sensitive | 201 | Concrete add; production approval when traffic or production assignment changes |
-| GET | `/projects/:projectIdOrName/domains/:domain` | `getVercelProjectDomain` | Read one project-domain configuration. | Read-only | 200 | Inspection |
-| POST | `/projects/:projectIdOrName/domains/:domain/verify` | `verifyVercelProjectDomain` | Trigger supported verification flow. | Production-sensitive when production domain | 200 | Explicit approval naming domain and effect |
-| PATCH | `/projects/:projectIdOrName/domains/:domain` | `updateVercelProjectDomain` | Update redirect/assignment fields from an explicit allowlist. | Production-sensitive | 200 | Explicit production approval |
-| DELETE | `/projects/:projectIdOrName/domains/:domain` | `removeVercelProjectDomain` | Remove exact project-domain association. | Destructive | 200 | Exact destructive confirmation and global enablement |
+| Method | Route                                               | Operation ID                | Purpose and request                                                  | Class                                       | Success | Approval                                                                        |
+| ------ | --------------------------------------------------- | --------------------------- | -------------------------------------------------------------------- | ------------------------------------------- | ------: | ------------------------------------------------------------------------------- |
+| GET    | `/projects/:projectIdOrName/domains`                | `listVercelProjectDomains`  | List normalized project-domain metadata.                             | Read-only                                   |     200 | Inspection                                                                      |
+| POST   | `/projects/:projectIdOrName/domains`                | `addVercelProjectDomain`    | Add allowlisted domain without moving Production traffic by default. | Normal or Production-sensitive              |     201 | Concrete add; production approval when traffic or production assignment changes |
+| GET    | `/projects/:projectIdOrName/domains/:domain`        | `getVercelProjectDomain`    | Read one project-domain configuration.                               | Read-only                                   |     200 | Inspection                                                                      |
+| POST   | `/projects/:projectIdOrName/domains/:domain/verify` | `verifyVercelProjectDomain` | Trigger supported verification flow.                                 | Production-sensitive when production domain |     200 | Explicit approval naming domain and effect                                      |
+| PATCH  | `/projects/:projectIdOrName/domains/:domain`        | `updateVercelProjectDomain` | Update redirect/assignment fields from an explicit allowlist.        | Production-sensitive                        |     200 | Explicit production approval                                                    |
+| DELETE | `/projects/:projectIdOrName/domains/:domain`        | `removeVercelProjectDomain` | Remove exact project-domain association.                             | Destructive                                 |     200 | Exact destructive confirmation and global enablement                            |
 
 Specific errors: domain not allowlisted `403`; already assigned/conflict `409`; verification prerequisite `409`; stale expected project/domain state `412`.
 
@@ -628,29 +628,29 @@ Specific errors: domain not allowlisted `403`; already assigned/conflict `409`; 
 
 Account-domain and DNS mutations remain disabled until their policy and test coverage have passed independent verification.
 
-| Method | Route | Operation ID | Purpose and request | Class | Success | Approval |
-| --- | --- | --- | --- | --- | ---: | --- |
-| GET | `/domains` | `listVercelDomains` | List allowlisted account-domain metadata. | Read-only | 200 | Inspection |
-| GET | `/domains/:domain` | `getVercelDomain` | Read account-domain metadata. | Read-only | 200 | Inspection |
-| GET | `/domains/:domain/configuration` | `getVercelDomainConfiguration` | Read normalized configuration and verification requirements. | Read-only | 200 | Inspection |
-| POST | `/domains` | `addVercelDomain` | Add allowlisted account domain only after mutation phase activation. | Production-sensitive | 201 | Explicit production approval |
-| PATCH | `/domains/:domain` | `updateVercelDomain` | Patch explicitly supported account-domain settings. | Production-sensitive | 200 | Explicit production approval |
-| DELETE | `/domains/:domain` | `removeVercelDomain` | Remove exact account domain. | Destructive | 200 | Exact destructive confirmation and global enablement |
-| GET | `/domains/:domain/dns-records` | `listVercelDnsRecords` | List bounded DNS record metadata. | Read-only | 200 | Inspection |
-| POST | `/domains/:domain/dns-records` | `createVercelDnsRecord` | Create one allowlisted, typed DNS record. | Production-sensitive | 201 | Explicit production approval |
-| PATCH | `/domains/:domain/dns-records/:recordId` | `updateVercelDnsRecord` | Update one record after expected-state read. | Production-sensitive | 200 | Explicit production approval |
-| DELETE | `/domains/:domain/dns-records/:recordId` | `deleteVercelDnsRecord` | Delete one exact DNS record. | Destructive | 200 | Exact destructive confirmation and global enablement |
+| Method | Route                                    | Operation ID                   | Purpose and request                                                  | Class                | Success | Approval                                             |
+| ------ | ---------------------------------------- | ------------------------------ | -------------------------------------------------------------------- | -------------------- | ------: | ---------------------------------------------------- |
+| GET    | `/domains`                               | `listVercelDomains`            | List allowlisted account-domain metadata.                            | Read-only            |     200 | Inspection                                           |
+| GET    | `/domains/:domain`                       | `getVercelDomain`              | Read account-domain metadata.                                        | Read-only            |     200 | Inspection                                           |
+| GET    | `/domains/:domain/configuration`         | `getVercelDomainConfiguration` | Read normalized configuration and verification requirements.         | Read-only            |     200 | Inspection                                           |
+| POST   | `/domains`                               | `addVercelDomain`              | Add allowlisted account domain only after mutation phase activation. | Production-sensitive |     201 | Explicit production approval                         |
+| PATCH  | `/domains/:domain`                       | `updateVercelDomain`           | Patch explicitly supported account-domain settings.                  | Production-sensitive |     200 | Explicit production approval                         |
+| DELETE | `/domains/:domain`                       | `removeVercelDomain`           | Remove exact account domain.                                         | Destructive          |     200 | Exact destructive confirmation and global enablement |
+| GET    | `/domains/:domain/dns-records`           | `listVercelDnsRecords`         | List bounded DNS record metadata.                                    | Read-only            |     200 | Inspection                                           |
+| POST   | `/domains/:domain/dns-records`           | `createVercelDnsRecord`        | Create one allowlisted, typed DNS record.                            | Production-sensitive |     201 | Explicit production approval                         |
+| PATCH  | `/domains/:domain/dns-records/:recordId` | `updateVercelDnsRecord`        | Update one record after expected-state read.                         | Production-sensitive |     200 | Explicit production approval                         |
+| DELETE | `/domains/:domain/dns-records/:recordId` | `deleteVercelDnsRecord`        | Delete one exact DNS record.                                         | Destructive          |     200 | Exact destructive confirmation and global enablement |
 
 Specific errors: unsupported record type `400`; domain/record not allowed `403`; duplicate record `409`; stale expected record `412`; account-domain mutation phase disabled `422`.
 
 ### 7.7 Aliases
 
-| Method | Route | Operation ID | Purpose and request | Class | Success | Approval |
-| --- | --- | --- | --- | --- | ---: | --- |
-| GET | `/aliases` | `listVercelAliases` | List aliases with bounded deployment/project filters. | Read-only | 200 | Inspection |
-| POST | `/aliases` | `createVercelAlias` | Assign an allowlisted alias to an exact deployment. | Normal or Production-sensitive | 201 | Concrete request; production approval when alias serves Production |
-| GET | `/aliases/:aliasIdOrName` | `getVercelAlias` | Read one normalized alias. | Read-only | 200 | Inspection |
-| DELETE | `/aliases/:aliasIdOrName` | `deleteVercelAlias` | Remove exact alias after current assignment read. | Destructive | 200 | Exact destructive confirmation and global enablement |
+| Method | Route                     | Operation ID        | Purpose and request                                   | Class                          | Success | Approval                                                           |
+| ------ | ------------------------- | ------------------- | ----------------------------------------------------- | ------------------------------ | ------: | ------------------------------------------------------------------ |
+| GET    | `/aliases`                | `listVercelAliases` | List aliases with bounded deployment/project filters. | Read-only                      |     200 | Inspection                                                         |
+| POST   | `/aliases`                | `createVercelAlias` | Assign an allowlisted alias to an exact deployment.   | Normal or Production-sensitive |     201 | Concrete request; production approval when alias serves Production |
+| GET    | `/aliases/:aliasIdOrName` | `getVercelAlias`    | Read one normalized alias.                            | Read-only                      |     200 | Inspection                                                         |
+| DELETE | `/aliases/:aliasIdOrName` | `deleteVercelAlias` | Remove exact alias after current assignment read.     | Destructive                    |     200 | Exact destructive confirmation and global enablement               |
 
 Specific errors: alias/domain not allowed `403`; alias conflict `409`; stale deployment/assignment `412`.
 
@@ -660,75 +660,75 @@ No file in this section is changed by this planning commit. These are proposed i
 
 ### 8.1 New source files
 
-| File | Responsibility |
-| --- | --- |
-| `src/controllers/vercel.controller.js` | Thin operation handlers: read `req.validated`, call one service method, return shared resource or paged envelopes. |
-| `src/middleware/requireVercelActionAuth.js` | Dedicated bearer authentication using fixed-width timing-safe comparison; fail closed; never retain token. |
-| `src/middleware/requireVercelResourceAccess.js` | Enforce configured team/project/repository/domain scope after validation and before service execution. |
-| `src/middleware/requireVercelApproval.js` | Enforce operation classification, production approval, destructive global flag, exact confirmation, and expected-state requirements. |
-| `src/middleware/validateVercel.js` | Apply named query/body/param schemas and merge normalized values into `req.validated`. |
-| `src/routes/v1/vercel.js` | Register only implemented routes, order middleware, and terminate unknown Vercel subpaths with a local 404. |
-| `src/services/vercelClient.js` | Authenticated `fetch` wrapper, team scope, timeouts, JSON parsing, safe metadata, dependency injection, and no raw-body exposure. |
-| `src/services/vercel.service.js` | Orchestrate policy, duplicate/current-state checks, client calls, polling metadata, and serialization. |
-| `src/services/vercelPolicy.js` | Pure normalization, classification, allowlist, approval, confirmation, expected-state, log-redaction, and Preview-default rules. |
-| `src/services/vercelErrors.js` | Translate network, timeout, malformed response, upstream status, rate-limit, auth, conflict, and precondition failures into safe `AppError` instances. |
-| `src/serializers/vercel.serializer.js` | Explicit field allowlists for user, team, project, deployment, event/log, environment metadata, domains, DNS, aliases, and cursors. |
-| `src/validation/vercel.schemas.js` | Operation-specific schemas with unknown-field rejection, bounds, enums, normalized identifiers, and approval/confirmation objects. |
+| File                                            | Responsibility                                                                                                                                         |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/controllers/vercel.controller.js`          | Thin operation handlers: read `req.validated`, call one service method, return shared resource or paged envelopes.                                     |
+| `src/middleware/requireVercelActionAuth.js`     | Dedicated bearer authentication using fixed-width timing-safe comparison; fail closed; never retain token.                                             |
+| `src/middleware/requireVercelResourceAccess.js` | Enforce configured team/project/repository/domain scope after validation and before service execution.                                                 |
+| `src/middleware/requireVercelApproval.js`       | Enforce operation classification, production approval, destructive global flag, exact confirmation, and expected-state requirements.                   |
+| `src/middleware/validateVercel.js`              | Apply named query/body/param schemas and merge normalized values into `req.validated`.                                                                 |
+| `src/routes/v1/vercel.js`                       | Register only implemented routes, order middleware, and terminate unknown Vercel subpaths with a local 404.                                            |
+| `src/services/vercelClient.js`                  | Authenticated `fetch` wrapper, team scope, timeouts, JSON parsing, safe metadata, dependency injection, and no raw-body exposure.                      |
+| `src/services/vercel.service.js`                | Orchestrate policy, duplicate/current-state checks, client calls, polling metadata, and serialization.                                                 |
+| `src/services/vercelPolicy.js`                  | Pure normalization, classification, allowlist, approval, confirmation, expected-state, log-redaction, and Preview-default rules.                       |
+| `src/services/vercelErrors.js`                  | Translate network, timeout, malformed response, upstream status, rate-limit, auth, conflict, and precondition failures into safe `AppError` instances. |
+| `src/serializers/vercel.serializer.js`          | Explicit field allowlists for user, team, project, deployment, event/log, environment metadata, domains, DNS, aliases, and cursors.                    |
+| `src/validation/vercel.schemas.js`              | Operation-specific schemas with unknown-field rejection, bounds, enums, normalized identifiers, and approval/confirmation objects.                     |
 
 ### 8.2 New test and fixture files
 
-| File | Responsibility |
-| --- | --- |
-| `tests/helpers/vercelFixtures.js` | Non-secret deterministic upstream fixtures, test config, auth header helper, IDs, cursors, errors, and status variants. |
-| `tests/unit/vercelEnv.test.js` | Configuration parsing, partial/missing config, secret-safe failures, allowlist normalization, and destructive flag. |
-| `tests/unit/vercelAuth.test.js` | Bearer parsing, constant-time comparison behavior, failure-closed config, and no credential leakage. |
-| `tests/unit/vercelPolicy.test.js` | Operation classification, allowlists, Preview defaults, approval and confirmation matching, normalization, concurrency rules, and prohibited capabilities. |
-| `tests/unit/vercelClient.test.js` | Headers, team scoping, URL construction, timeout, JSON handling, dependency injection, no caller-controlled upstream URL, and safe logs. |
-| `tests/unit/vercelErrorTranslation.test.js` | `400`, `401`, `403`, `404`, `409`, `412`, `429`, `5xx`, timeout, network, and malformed-response translation. |
-| `tests/unit/vercelSerializer.test.js` | Field allowlists, status normalization, cursor metadata, and exclusion of tokens, raw objects, secret values, and unsafe logs. |
-| `tests/unit/vercelService.test.js` | Resource workflows, duplicate detection, state checks, Preview defaults, production/destructive denials, promotion/rollback verification, and no-upstream-after-denial. |
-| `tests/integration/vercelRoutes.test.js` | Route registration, authentication, validation, classification, status codes, envelopes, correlation IDs, and service-boundary calls. |
-| `tests/integration/vercelBodyLimit.test.js` | Namespace body-size enforcement, including safe handling of environment-value requests. |
-| `tests/integration/vercelDatabaseIndependence.test.js` | Request-time Vercel access bypasses `requireDatabase`; context routes retain existing behavior. |
-| `tests/integration/vercelProductionRouteRegistration.test.js` | Production-mode app exposes only the implemented and documented route set. |
-| `tests/integration/vercelRateLimit.test.js` | Shared and lower production/destructive limits, safe `429`, and no upstream call after limit. |
-| `tests/integration/vercelSecretRedaction.test.js` | Authorization, environment values, upstream payloads, and diagnostic logs are absent from responses and captured logs. |
+| File                                                          | Responsibility                                                                                                                                                          |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/helpers/vercelFixtures.js`                             | Non-secret deterministic upstream fixtures, test config, auth header helper, IDs, cursors, errors, and status variants.                                                 |
+| `tests/unit/vercelEnv.test.js`                                | Configuration parsing, partial/missing config, secret-safe failures, allowlist normalization, and destructive flag.                                                     |
+| `tests/unit/vercelAuth.test.js`                               | Bearer parsing, constant-time comparison behavior, failure-closed config, and no credential leakage.                                                                    |
+| `tests/unit/vercelPolicy.test.js`                             | Operation classification, allowlists, Preview defaults, approval and confirmation matching, normalization, concurrency rules, and prohibited capabilities.              |
+| `tests/unit/vercelClient.test.js`                             | Headers, team scoping, URL construction, timeout, JSON handling, dependency injection, no caller-controlled upstream URL, and safe logs.                                |
+| `tests/unit/vercelErrorTranslation.test.js`                   | `400`, `401`, `403`, `404`, `409`, `412`, `429`, `5xx`, timeout, network, and malformed-response translation.                                                           |
+| `tests/unit/vercelSerializer.test.js`                         | Field allowlists, status normalization, cursor metadata, and exclusion of tokens, raw objects, secret values, and unsafe logs.                                          |
+| `tests/unit/vercelService.test.js`                            | Resource workflows, duplicate detection, state checks, Preview defaults, production/destructive denials, promotion/rollback verification, and no-upstream-after-denial. |
+| `tests/integration/vercelRoutes.test.js`                      | Route registration, authentication, validation, classification, status codes, envelopes, correlation IDs, and service-boundary calls.                                   |
+| `tests/integration/vercelBodyLimit.test.js`                   | Namespace body-size enforcement, including safe handling of environment-value requests.                                                                                 |
+| `tests/integration/vercelDatabaseIndependence.test.js`        | Request-time Vercel access bypasses `requireDatabase`; context routes retain existing behavior.                                                                         |
+| `tests/integration/vercelProductionRouteRegistration.test.js` | Production-mode app exposes only the implemented and documented route set.                                                                                              |
+| `tests/integration/vercelRateLimit.test.js`                   | Shared and lower production/destructive limits, safe `429`, and no upstream call after limit.                                                                           |
+| `tests/integration/vercelSecretRedaction.test.js`             | Authorization, environment values, upstream payloads, and diagnostic logs are absent from responses and captured logs.                                                  |
 
 Test files may be combined when that improves maintainability, but every responsibility must remain covered.
 
 ### 8.3 New documentation and validation files
 
-| File | Responsibility |
-| --- | --- |
-| `docs/openapi/zoro-vercel-core-action.yaml` | Builder-facing Vercel contract for user, team, project, and deployment operations. |
-| `docs/openapi/zoro-vercel-config-action.yaml` | Builder-facing Vercel contract for environment-variable metadata, project domains, aliases, domain configuration, and DNS records. |
-| `scripts/validate-vercel-gateway-release.js` | Validate spec/plan/schema/route alignment, per-schema operation budget, operation IDs within and across schemas, security, production URL, approval schemas, prohibited operations, and no decrypted-value endpoint. |
-| `docs/VERCEL_GATEWAY_RELEASE_CHECKLIST.md` | Optional but recommended controlled verification, deployment, Builder installation, Preview mutation, cleanup, rollback, and evidence checklist. |
+| File                                          | Responsibility                                                                                                                                                                                                       |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/openapi/zoro-vercel-core-action.yaml`   | Builder-facing Vercel contract for user, team, project, and deployment operations.                                                                                                                                   |
+| `docs/openapi/zoro-vercel-config-action.yaml` | Builder-facing Vercel contract for environment-variable metadata, project domains, aliases, domain configuration, and DNS records.                                                                                   |
+| `scripts/validate-vercel-gateway-release.js`  | Validate spec/plan/schema/route alignment, per-schema operation budget, operation IDs within and across schemas, security, production URL, approval schemas, prohibited operations, and no decrypted-value endpoint. |
+| `docs/VERCEL_GATEWAY_RELEASE_CHECKLIST.md`    | Optional but recommended controlled verification, deployment, Builder installation, Preview mutation, cleanup, rollback, and evidence checklist.                                                                     |
 
 ### 8.4 Existing files expected to change
 
-| File | Evidence-supported change |
-| --- | --- |
-| `src/app.js` | Import and mount the Vercel router before `requireDatabase`; add bounded parser and Vercel middleware; export any Vercel body-limit constant used by tests. |
-| `src/config/env.js` | Add validated Vercel configuration and exports while preserving current frozen-object and secret-safe behavior. |
-| `src/utils/errors.js` | Add Vercel-specific `AppError` subclasses. |
-| `.env.example` | Add empty Vercel configuration placeholders and safety comments. |
-| `package.json` | Add `verify:vercel-gateway` and include it in aggregate `verify`; no dependency is required when using Node 24 global `fetch`. |
-| `README.md` | Document authenticated namespace, capability classifications, Preview default, approval gates, blocked decrypted values, limits, and error codes after implementation. |
-| `docs/DEPLOYMENT.md` | Document safe Heroku configuration, verification, rollout, smoke-test order, rollback, and credential rotation without values. |
+| File                  | Evidence-supported change                                                                                                                                              |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/app.js`          | Import and mount the Vercel router before `requireDatabase`; add bounded parser and Vercel middleware; export any Vercel body-limit constant used by tests.            |
+| `src/config/env.js`   | Add validated Vercel configuration and exports while preserving current frozen-object and secret-safe behavior.                                                        |
+| `src/utils/errors.js` | Add Vercel-specific `AppError` subclasses.                                                                                                                             |
+| `.env.example`        | Add empty Vercel configuration placeholders and safety comments.                                                                                                       |
+| `package.json`        | Add `verify:vercel-gateway` and include it in aggregate `verify`; no dependency is required when using Node 24 global `fetch`.                                         |
+| `README.md`           | Document authenticated namespace, capability classifications, Preview default, approval gates, blocked decrypted values, limits, and error codes after implementation. |
+| `docs/DEPLOYMENT.md`  | Document safe Heroku configuration, verification, rollout, smoke-test order, rollback, and credential rotation without values.                                         |
 
 ### 8.5 Existing files that change only if evidence requires it
 
-| File | Change condition |
-| --- | --- |
-| `src/middleware/errorHandler.js` | Only if framework-level Vercel errors cannot be translated safely inside `vercelErrors.js`. |
-| `src/utils/responses.js` | Only if current `sendPagedCollection` cannot express Vercel cursor metadata without inventing totals. |
-| `src/utils/logger.js` | Only if Vercel log/value redaction requires shared redaction behavior rather than a Vercel-specific sanitizer. |
-| `src/middleware/security.js` | Only if production/destructive per-class rate limiters cannot be configured through the current factory. |
-| `src/middleware/allowedMethods.js` | Only if a required, approved HTTP method is absent; current GET/POST/PATCH/DELETE coverage appears sufficient. |
-| `src/server.js` | No change under this plan. Process-level MongoDB decoupling requires separate approval. |
-| `package-lock.json` | No change when no dependency is added. Change only with a separately justified dependency decision. |
-| `docs/openapi/zoro-action.yaml` | No Vercel operations added; it may later be split into dedicated Context and GitHub schemas through separate schema-governance work. |
+| File                               | Change condition                                                                                                                     |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/middleware/errorHandler.js`   | Only if framework-level Vercel errors cannot be translated safely inside `vercelErrors.js`.                                          |
+| `src/utils/responses.js`           | Only if current `sendPagedCollection` cannot express Vercel cursor metadata without inventing totals.                                |
+| `src/utils/logger.js`              | Only if Vercel log/value redaction requires shared redaction behavior rather than a Vercel-specific sanitizer.                       |
+| `src/middleware/security.js`       | Only if production/destructive per-class rate limiters cannot be configured through the current factory.                             |
+| `src/middleware/allowedMethods.js` | Only if a required, approved HTTP method is absent; current GET/POST/PATCH/DELETE coverage appears sufficient.                       |
+| `src/server.js`                    | No change under this plan. Process-level MongoDB decoupling requires separate approval.                                              |
+| `package-lock.json`                | No change when no dependency is added. Change only with a separately justified dependency decision.                                  |
+| `docs/openapi/zoro-action.yaml`    | No Vercel operations added; it may later be split into dedicated Context and GitHub schemas through separate schema-governance work. |
 
 ## 9. Phased delivery plan
 
@@ -1490,24 +1490,24 @@ Do not describe the gateway as verified or available until all applicable eviden
 
 ### 13.2 Risk register
 
-| Risk | Impact | Mitigation / gate |
-| --- | --- | --- |
-| Vercel API version or route drift | Incorrect requests, unsafe assumptions, failed release | Phase 0 official-documentation revalidation, isolated client adapter, contract fixtures, release validator |
-| Token scope broader than needed | Large account blast radius | Narrow account/team token, allowlists, expiration/rotation, independent configuration review |
-| Accidental Production deployment or traffic change | Outage or unintended release | Preview default, server-enforced classification and approval, lower rate limits, separate smoke authority |
-| Destructive resource deletion | Data/config loss | Global false-by-default flag, exact confirmation, current-state read, preconditions, no bulk delete, no automatic retry |
-| Billing impact | Unexpected build/domain usage cost | Disposable bounded tests, explicit resource list, cleanup evidence, no paid service selection without approval |
-| Environment secret exposure | Credential compromise | No decrypted reads, no value return, body-safe logging, redacted errors, generated tests, credential rotation process |
-| Deployment logs contain application secrets | Sensitive data leak | Bounded windows, redaction, truncation, no persistence, documented imperfect detection, diagnostic phase gate |
-| DNS/domain mutation error | Production outage or domain loss | Domain allowlist, read first, explicit production approval, mutation disabled until independently verified, rollback evidence |
-| Ambiguous project names | Wrong resource mutation | Prefer immutable IDs, reject ambiguity, exact confirmation for high-risk operations |
-| Promotion/rollback semantics change | Incorrect production state claim | Current-state read, official API revalidation, resulting-state confirmation, no success from accepted request alone |
-| Timeout after mutation | Unknown result and duplicate action | No automatic retry, reconcile by reading current state and idempotency evidence |
-| Rate limits | Failed diagnostics or repeated polling | Bounded pagination/polling, safe `429`, retry metadata, no rapid loops |
-| Builder operation/schema limits | Action cannot be installed or maintained | Dedicated schema, phased operation surface, validate current limits, approved split only if needed |
-| Schema drift | Zoro calls nonexistent or mismatched routes | Canonical repository schema, operation registry, route/schema validator, exact deployed revision |
-| Process-level MongoDB startup dependency | Vercel unavailable when database prevents startup | Document limitation; separate architecture approval required to decouple process startup |
-| Project transfer or team restrictions | Unsupported operation or ownership conflict | Treat transfers as prohibited; confirm team scope; stop on ownership mismatch |
+| Risk                                               | Impact                                                 | Mitigation / gate                                                                                                             |
+| -------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| Vercel API version or route drift                  | Incorrect requests, unsafe assumptions, failed release | Phase 0 official-documentation revalidation, isolated client adapter, contract fixtures, release validator                    |
+| Token scope broader than needed                    | Large account blast radius                             | Narrow account/team token, allowlists, expiration/rotation, independent configuration review                                  |
+| Accidental Production deployment or traffic change | Outage or unintended release                           | Preview default, server-enforced classification and approval, lower rate limits, separate smoke authority                     |
+| Destructive resource deletion                      | Data/config loss                                       | Global false-by-default flag, exact confirmation, current-state read, preconditions, no bulk delete, no automatic retry       |
+| Billing impact                                     | Unexpected build/domain usage cost                     | Disposable bounded tests, explicit resource list, cleanup evidence, no paid service selection without approval                |
+| Environment secret exposure                        | Credential compromise                                  | No decrypted reads, no value return, body-safe logging, redacted errors, generated tests, credential rotation process         |
+| Deployment logs contain application secrets        | Sensitive data leak                                    | Bounded windows, redaction, truncation, no persistence, documented imperfect detection, diagnostic phase gate                 |
+| DNS/domain mutation error                          | Production outage or domain loss                       | Domain allowlist, read first, explicit production approval, mutation disabled until independently verified, rollback evidence |
+| Ambiguous project names                            | Wrong resource mutation                                | Prefer immutable IDs, reject ambiguity, exact confirmation for high-risk operations                                           |
+| Promotion/rollback semantics change                | Incorrect production state claim                       | Current-state read, official API revalidation, resulting-state confirmation, no success from accepted request alone           |
+| Timeout after mutation                             | Unknown result and duplicate action                    | No automatic retry, reconcile by reading current state and idempotency evidence                                               |
+| Rate limits                                        | Failed diagnostics or repeated polling                 | Bounded pagination/polling, safe `429`, retry metadata, no rapid loops                                                        |
+| Builder operation/schema limits                    | Action cannot be installed or maintained               | Dedicated schema, phased operation surface, validate current limits, approved split only if needed                            |
+| Schema drift                                       | Zoro calls nonexistent or mismatched routes            | Canonical repository schema, operation registry, route/schema validator, exact deployed revision                              |
+| Process-level MongoDB startup dependency           | Vercel unavailable when database prevents startup      | Document limitation; separate architecture approval required to decouple process startup                                      |
+| Project transfer or team restrictions              | Unsupported operation or ownership conflict            | Treat transfers as prohibited; confirm team scope; stop on ownership mismatch                                                 |
 
 ### 13.3 Open questions requiring implementation-time resolution
 
@@ -1532,19 +1532,19 @@ Do not describe the gateway as verified or available until all applicable eviden
 
 The Vercel Gateway must be reported through distinct states. No later state may be inferred from an earlier one.
 
-| State | Required evidence | Must not imply |
-| --- | --- | --- |
-| **Planned** | Approved specification and implementation-ready plan exist. | Source code, tests, credentials, routes, deployment, or Action exist. |
-| **Implemented** | Scoped source/tests/docs exist on an isolated branch and match approved operation subset. | Tests pass, commit exists, merge, deployment, or runtime behavior. |
-| **Committed** | Exact commit SHA and changed-file list exist. | Independent verification, merge, deployment, or Action availability. |
-| **Repository-verified** | Clean `npm ci`, focused tests, `npm run verify`, CI, diff review, secret review, and independent evidence pass for exact SHA. | Deployment or live provider behavior. |
-| **Merged** | Verified commit is integrated into `main` with merge evidence and no unreviewed changes. | Heroku deployment or Builder configuration. |
-| **Deployed** | Exact merged revision is in a recorded Heroku release with healthy startup evidence. | Action installed or end-to-end Zoro success. |
-| **Configured in GPT Builder** | Dedicated verified schema and bearer authentication are saved; fresh conversation started. | Live operations work or provider mutations are correct. |
-| **Smoke-tested** | Read-only tests and authorized disposable Preview mutation/cleanup succeed through Zoro and primary Vercel evidence. | Production or destructive behavior is verified. |
-| **Production-verified** | Separately authorized production operation succeeds, resulting state is independently confirmed, and rollback evidence exists. | All destructive operations are safe. |
-| **Independently verified** | An independent reviewer matches repository, CI, deployment, Builder, Vercel, security, and cleanup evidence to acceptance criteria. | Unimplemented future operation groups. |
-| **Operationally available** | Approved operation subset is documented, deployed, configured, smoke-tested, monitored, supportable, and bounded by known limitations. | Unlimited Vercel account access or completion of prohibited capabilities. |
+| State                         | Required evidence                                                                                                                      | Must not imply                                                            |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| **Planned**                   | Approved specification and implementation-ready plan exist.                                                                            | Source code, tests, credentials, routes, deployment, or Action exist.     |
+| **Implemented**               | Scoped source/tests/docs exist on an isolated branch and match approved operation subset.                                              | Tests pass, commit exists, merge, deployment, or runtime behavior.        |
+| **Committed**                 | Exact commit SHA and changed-file list exist.                                                                                          | Independent verification, merge, deployment, or Action availability.      |
+| **Repository-verified**       | Clean `npm ci`, focused tests, `npm run verify`, CI, diff review, secret review, and independent evidence pass for exact SHA.          | Deployment or live provider behavior.                                     |
+| **Merged**                    | Verified commit is integrated into `main` with merge evidence and no unreviewed changes.                                               | Heroku deployment or Builder configuration.                               |
+| **Deployed**                  | Exact merged revision is in a recorded Heroku release with healthy startup evidence.                                                   | Action installed or end-to-end Zoro success.                              |
+| **Configured in GPT Builder** | Dedicated verified schema and bearer authentication are saved; fresh conversation started.                                             | Live operations work or provider mutations are correct.                   |
+| **Smoke-tested**              | Read-only tests and authorized disposable Preview mutation/cleanup succeed through Zoro and primary Vercel evidence.                   | Production or destructive behavior is verified.                           |
+| **Production-verified**       | Separately authorized production operation succeeds, resulting state is independently confirmed, and rollback evidence exists.         | All destructive operations are safe.                                      |
+| **Independently verified**    | An independent reviewer matches repository, CI, deployment, Builder, Vercel, security, and cleanup evidence to acceptance criteria.    | Unimplemented future operation groups.                                    |
+| **Operationally available**   | Approved operation subset is documented, deployed, configured, smoke-tested, monitored, supportable, and bounded by known limitations. | Unlimited Vercel account access or completion of prohibited capabilities. |
 
 ### 14.1 Completion criteria for the approved operation subset
 

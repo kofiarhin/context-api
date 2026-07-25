@@ -33,7 +33,10 @@ class RouteNotFoundError extends AppError {
   }
 }
 class MethodNotAllowedError extends AppError {
-  constructor(message = 'This HTTP method is not supported for the requested route.', details = []) {
+  constructor(
+    message = 'This HTTP method is not supported for the requested route.',
+    details = []
+  ) {
     super('METHOD_NOT_ALLOWED', message, 405, details);
   }
 }
@@ -73,7 +76,10 @@ class GithubNotFoundError extends AppError {
   }
 }
 class GithubConflictError extends AppError {
-  constructor(message = 'The GitHub operation conflicts with the current repository state.', details = []) {
+  constructor(
+    message = 'The GitHub operation conflicts with the current repository state.',
+    details = []
+  ) {
     super('GITHUB_CONFLICT', message, 409, details);
   }
 }

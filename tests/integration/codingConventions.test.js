@@ -42,9 +42,7 @@ describe('GET /api/v1/coding-conventions', () => {
     const response = await request(app).get('/api/v1/coding-conventions?technology=express');
 
     expect(response.body.data.length).toBeGreaterThan(0);
-    response.body.data.forEach((convention) =>
-      expect(convention.technology).toContain('express')
-    );
+    response.body.data.forEach((convention) => expect(convention.technology).toContain('express'));
   });
 
   it('filters by layer', async () => {
@@ -58,9 +56,7 @@ describe('GET /api/v1/coding-conventions', () => {
     const response = await request(app).get('/api/v1/coding-conventions?project=context-api');
 
     expect(response.body.data.length).toBeGreaterThan(0);
-    response.body.data.forEach((convention) =>
-      expect(convention.projectId).toBe('context-api')
-    );
+    response.body.data.forEach((convention) => expect(convention.projectId).toBe('context-api'));
   });
 
   it('filters by status', async () => {
@@ -96,7 +92,9 @@ describe('GET /api/v1/coding-conventions', () => {
   });
 
   it('does not silently resolve conflicts in a collection response', async () => {
-    const response = await request(app).get('/api/v1/coding-conventions?technology=express&pageSize=100');
+    const response = await request(app).get(
+      '/api/v1/coding-conventions?technology=express&pageSize=100'
+    );
 
     const scopes = new Set(response.body.data.map((entry) => entry.scope));
 

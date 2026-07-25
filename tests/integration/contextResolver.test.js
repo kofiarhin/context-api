@@ -69,9 +69,7 @@ describe('GET /api/v1/context/resolve', () => {
   });
 
   it('requires a client identifier', async () => {
-    const response = await request(app).get(
-      '/api/v1/context/resolve?projectId=context-api'
-    );
+    const response = await request(app).get('/api/v1/context/resolve?projectId=context-api');
 
     expect(response.status).toBe(400);
     expect(response.body.error.details[0].field).toBe('client');

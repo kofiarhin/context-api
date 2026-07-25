@@ -274,9 +274,7 @@ function normalizeEnvelope(raw) {
 function assertOperation(operationId, operation) {
   const catalogue = CATALOGUES[operationId];
   if (!catalogue) {
-    throw new ResourceNotFoundError(
-      `Zoro engineering dispatcher "${operationId}" was not found.`
-    );
+    throw new ResourceNotFoundError(`Zoro engineering dispatcher "${operationId}" was not found.`);
   }
 
   if (!Object.prototype.hasOwnProperty.call(catalogue, operation)) {
@@ -364,9 +362,7 @@ function sanitizeResult(value) {
 async function getCurrentContextResource(domainName, rawIdentifier) {
   const definition = CONTEXT_DOMAINS[domainName];
   const identifier =
-    domainName === 'profile'
-      ? null
-      : validateIdentifierParam(rawIdentifier, definition.identifier);
+    domainName === 'profile' ? null : validateIdentifierParam(rawIdentifier, definition.identifier);
   const record = await definition.get(identifier);
 
   if (!record) {
@@ -399,9 +395,7 @@ async function executeEngineeringRead(definition, envelope) {
   const validated = domain.queryValidator(envelope.query);
   const listed = await domain.list(validated.filters, validated.pagination);
   const serializer =
-    validated.pagination.view === 'summary'
-      ? domain.summarySerializer
-      : domain.serializer;
+    validated.pagination.view === 'summary' ? domain.summarySerializer : domain.serializer;
   const result = listed.items.map(serializer);
   const mode = listed.mode || validated.pagination.mode;
   const meta =
@@ -469,16 +463,10 @@ async function executeEngineeringArchive(definition, envelope) {
 }
 
 function serializeResolvedContext(resolved) {
-  const profile = resolved.profile
-    ? serializers.serializeProfileSummary(resolved.profile)
-    : null;
-  const project = resolved.project
-    ? serializers.serializeProjectSummary(resolved.project)
-    : null;
+  const profile = resolved.profile ? serializers.serializeProfileSummary(resolved.profile) : null;
+  const project = resolved.project ? serializers.serializeProjectSummary(resolved.project) : null;
   const task = resolved.task ? serializers.serializeTaskSummary(resolved.task) : null;
-  const instructionSets = resolved.instructionSets.map(
-    serializers.serializeInstructionSetSummary
-  );
+  const instructionSets = resolved.instructionSets.map(serializers.serializeInstructionSetSummary);
   const codingConventions = resolved.codingConventions.map(
     serializers.serializeCodingConventionSummary
   );
@@ -570,9 +558,7 @@ function githubInput(operation, envelope) {
         expectedHeadSha: envelope.expectedHeadSha || input.expectedHeadSha,
         mergeMethod: input.mergeMethod,
         ...(input.commitTitle === undefined ? {} : { commitTitle: input.commitTitle }),
-        ...(input.commitMessage === undefined
-          ? {}
-          : { commitMessage: input.commitMessage }),
+        ...(input.commitMessage === undefined ? {} : { commitMessage: input.commitMessage }),
       }),
       pullNumber,
     };
@@ -623,9 +609,7 @@ async function executeVercel(category, envelope) {
     ...envelope.body,
     ...envelope.query,
     ...envelope.params,
-    ...(envelope.expectedEtag === undefined
-      ? {}
-      : { expectedEtag: envelope.expectedEtag }),
+    ...(envelope.expectedEtag === undefined ? {} : { expectedEtag: envelope.expectedEtag }),
     ...(envelope.expectedSha === undefined ? {} : { expectedSha: envelope.expectedSha }),
     ...(envelope.expectedCurrentRelease === undefined
       ? {}

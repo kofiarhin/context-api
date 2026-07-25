@@ -2,8 +2,7 @@
 
 > **Historical document.** This plan captures the original read-only MVP scope and is retained as a
 > record of that phase. It no longer describes the API. The approved scope is now a public,
-> unauthenticated CRUD MVP supporting GET, POST, PATCH, and soft-delete DELETE, with PUT returning
-> 405. References to "read-only" endpoints below are historical. See [`../README.md`](../README.md)
+> unauthenticated CRUD MVP supporting GET, POST, PATCH, and soft-delete DELETE, with PUT returning 405. References to "read-only" endpoints below are historical. See [`../README.md`](../README.md)
 > for the current contract and [`DEPLOYMENT.md`](DEPLOYMENT.md) for supported methods.
 
 **Version:** 0.1  
@@ -43,16 +42,16 @@ A work item is complete only when:
 
 ## 3. Phase Overview
 
-| Phase | Outcome |
-| --- | --- |
-| 0 | Repository and tooling foundation |
-| 1 | Application, configuration, database, and health endpoint |
-| 2 | Shared API infrastructure and validation |
-| 3 | Domain models and deterministic seeds |
-| 4 | Core read endpoints |
-| 5 | Remaining read endpoints and conflict rules |
-| 6 | Security hardening, observability, and resilience |
-| 7 | Sample client, payload validation, and MVP closure |
+| Phase | Outcome                                                   |
+| ----- | --------------------------------------------------------- |
+| 0     | Repository and tooling foundation                         |
+| 1     | Application, configuration, database, and health endpoint |
+| 2     | Shared API infrastructure and validation                  |
+| 3     | Domain models and deterministic seeds                     |
+| 4     | Core read endpoints                                       |
+| 5     | Remaining read endpoints and conflict rules               |
+| 6     | Security hardening, observability, and resilience         |
+| 7     | Sample client, payload validation, and MVP closure        |
 
 ## 4. Phase 0 — Repository Foundation
 
@@ -531,22 +530,22 @@ Each feature commit should include its tests where practical.
 
 ## 13. Test Matrix
 
-| Area | Unit | Integration |
-| --- | --- | --- |
-| Environment validation | Yes | Startup test |
-| Database lifecycle | Yes | Yes |
-| Health | Limited | Yes |
-| Validation | Yes | Yes |
-| Response helpers | Yes | Yes |
-| Error translation | Yes | Yes |
-| Models and indexes | Yes | Yes |
-| Seed process | Yes | Yes |
-| Domain services | Yes | Through endpoints |
-| Serializers | Yes | Yes |
-| Filters and pagination | Yes | Yes |
-| Conflict precedence | Yes | Targeted integration |
-| Logging and correlation IDs | Yes | Yes |
-| Rate limiting and CORS | Configuration tests | Yes |
+| Area                        | Unit                | Integration          |
+| --------------------------- | ------------------- | -------------------- |
+| Environment validation      | Yes                 | Startup test         |
+| Database lifecycle          | Yes                 | Yes                  |
+| Health                      | Limited             | Yes                  |
+| Validation                  | Yes                 | Yes                  |
+| Response helpers            | Yes                 | Yes                  |
+| Error translation           | Yes                 | Yes                  |
+| Models and indexes          | Yes                 | Yes                  |
+| Seed process                | Yes                 | Yes                  |
+| Domain services             | Yes                 | Through endpoints    |
+| Serializers                 | Yes                 | Yes                  |
+| Filters and pagination      | Yes                 | Yes                  |
+| Conflict precedence         | Yes                 | Targeted integration |
+| Logging and correlation IDs | Yes                 | Yes                  |
+| Rate limiting and CORS      | Configuration tests | Yes                  |
 
 ## 14. Risks and Mitigations
 

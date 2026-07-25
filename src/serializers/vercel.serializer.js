@@ -127,4 +127,14 @@ function dnsRecord(value = {}) {
   });
 }
 
-module.exports = { user, team, project, deployment, environmentVariable, domain, alias, dnsRecord, compact };
+module.exports = {
+  user,
+  team,
+  project,
+  deployment,
+  environmentVariable,
+  domain,
+  alias,
+  dnsRecord,
+  compact,
+};

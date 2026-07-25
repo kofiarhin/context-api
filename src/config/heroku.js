@@ -45,9 +45,7 @@ function getHerokuConfig(baseEnv = {}, source = process.env) {
     if (!key) problems.push('ZORO_HEROKU_API_KEY is required.');
     if (!selfApp) problems.push('HEROKU_SELF_APP is required.');
     if (key && key.length < MIN_BEARER_KEY_LENGTH) {
-      problems.push(
-        `ZORO_HEROKU_API_KEY must be at least ${MIN_BEARER_KEY_LENGTH} characters.`
-      );
+      problems.push(`ZORO_HEROKU_API_KEY must be at least ${MIN_BEARER_KEY_LENGTH} characters.`);
     }
     if (!RESOURCE_ACCESS_MODES.has(resourceAccess)) {
       problems.push('HEROKU_RESOURCE_ACCESS must be allowlist or all.');
@@ -85,8 +83,7 @@ function getHerokuConfig(baseEnv = {}, source = process.env) {
       'HEROKU_MUTATIONS_ENABLED'
     ),
     herokuDestructiveOperationsEnabled: parseBoolean(
-      source.HEROKU_DESTRUCTIVE_OPERATIONS_ENABLED ??
-        baseEnv.herokuDestructiveOperationsEnabled,
+      source.HEROKU_DESTRUCTIVE_OPERATIONS_ENABLED ?? baseEnv.herokuDestructiveOperationsEnabled,
       false,
       'HEROKU_DESTRUCTIVE_OPERATIONS_ENABLED'
     ),
@@ -96,14 +93,12 @@ function getHerokuConfig(baseEnv = {}, source = process.env) {
       'HEROKU_BILLING_OPERATIONS_ENABLED'
     ),
     herokuAccessAdminOperationsEnabled: parseBoolean(
-      source.HEROKU_ACCESS_ADMIN_OPERATIONS_ENABLED ??
-        baseEnv.herokuAccessAdminOperationsEnabled,
+      source.HEROKU_ACCESS_ADMIN_OPERATIONS_ENABLED ?? baseEnv.herokuAccessAdminOperationsEnabled,
       false,
       'HEROKU_ACCESS_ADMIN_OPERATIONS_ENABLED'
     ),
     herokuPrivateSpaceOperationsEnabled: parseBoolean(
-      source.HEROKU_PRIVATE_SPACE_OPERATIONS_ENABLED ??
-        baseEnv.herokuPrivateSpaceOperationsEnabled,
+      source.HEROKU_PRIVATE_SPACE_OPERATIONS_ENABLED ?? baseEnv.herokuPrivateSpaceOperationsEnabled,
       false,
       'HEROKU_PRIVATE_SPACE_OPERATIONS_ENABLED'
     ),

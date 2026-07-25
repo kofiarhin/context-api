@@ -21,9 +21,7 @@ describe('CORS allowlist', () => {
   it('allows an origin on the allowlist', async () => {
     const app = buildTestApp({ corsOrigins: allowlist });
 
-    const response = await request(app)
-      .get('/health')
-      .set('Origin', 'https://app.example.com');
+    const response = await request(app).get('/health').set('Origin', 'https://app.example.com');
 
     expect(response.headers['access-control-allow-origin']).toBe('https://app.example.com');
   });
@@ -39,7 +37,9 @@ describe('CORS allowlist', () => {
   it('never emits a wildcard when no origins are configured', async () => {
     const app = buildTestApp({ corsOrigins: [] });
 
-    const response = await request(app).get('/health').set('Origin', 'https://anything.example.com');
+    const response = await request(app)
+      .get('/health')
+      .set('Origin', 'https://anything.example.com');
 
     expect(response.headers['access-control-allow-origin']).not.toBe('*');
     expect(response.headers['access-control-allow-origin']).toBeUndefined();

@@ -33,7 +33,10 @@ function isNonEmptyString(value, minLength = 1) {
  * the audit trail is the point.
  */
 function requireKofiApproval(approval, classification) {
-  if (approval !== undefined && (!approval || typeof approval !== 'object' || Array.isArray(approval))) {
+  if (
+    approval !== undefined &&
+    (!approval || typeof approval !== 'object' || Array.isArray(approval))
+  ) {
     throw new ValidationError('approval must be an object.');
   }
 

@@ -4,7 +4,8 @@ module.exports = [
   {
     taskId: 'context-api-health-endpoint',
     title: 'Implement the health endpoint',
-    description: 'Report application and database availability without exposing connection details.',
+    description:
+      'Report application and database availability without exposing connection details.',
     projectId: 'context-api',
     status: 'done',
     priority: 'high',
@@ -31,7 +32,10 @@ module.exports = [
     ],
     dependencies: ['context-api-health-endpoint'],
     tags: ['backend', 'api'],
-    source: { type: 'repository', reference: 'kofiarhin/context-api/docs/SPEC.md#6-api-conventions' },
+    source: {
+      type: 'repository',
+      reference: 'kofiarhin/context-api/docs/SPEC.md#6-api-conventions',
+    },
   },
   {
     taskId: 'context-api-domain-models',
@@ -80,7 +84,10 @@ module.exports = [
     ],
     dependencies: ['context-api-seed-workflow'],
     tags: ['validation'],
-    source: { type: 'repository', reference: 'kofiarhin/context-api/docs/PRD.md#19-success-metrics' },
+    source: {
+      type: 'repository',
+      reference: 'kofiarhin/context-api/docs/PRD.md#19-success-metrics',
+    },
   },
   {
     taskId: 'context-api-authentication',
@@ -96,12 +103,16 @@ module.exports = [
     ],
     dependencies: ['context-api-payload-comparison'],
     tags: ['security'],
-    source: { type: 'repository', reference: 'kofiarhin/context-api/docs/PRD.md#14-future-security-requirements' },
+    source: {
+      type: 'repository',
+      reference: 'kofiarhin/context-api/docs/PRD.md#14-future-security-requirements',
+    },
   },
   {
     taskId: 'context-api-deployment-check',
     title: 'Validate deployment configuration in a non-production environment',
-    description: 'Confirm environment validation, CORS allowlist, and rate limiting behave as configured.',
+    description:
+      'Confirm environment validation, CORS allowlist, and rate limiting behave as configured.',
     projectId: 'context-api',
     status: 'ready',
     priority: 'medium',
@@ -112,7 +123,10 @@ module.exports = [
     ],
     dependencies: ['context-api-seed-workflow'],
     tags: ['deployment'],
-    source: { type: 'repository', reference: 'kofiarhin/context-api/docs/IMPLEMENTATION_PLAN.md#11-phase-7' },
+    source: {
+      type: 'repository',
+      reference: 'kofiarhin/context-api/docs/IMPLEMENTATION_PLAN.md#11-phase-7',
+    },
   },
   {
     taskId: 'ideas-hub-canonical-file-audit',
@@ -157,7 +171,10 @@ module.exports = [
     ],
     dependencies: ['context-api-payload-comparison'],
     tags: ['workflow', 'agent', 'architect'],
-    source: { type: 'user-approved', reference: 'kofiarhin/context-api/docs/PRD.md#6-target-consumers' },
+    source: {
+      type: 'user-approved',
+      reference: 'kofiarhin/context-api/docs/PRD.md#6-target-consumers',
+    },
   },
   {
     taskId: 'architect-legacy-prompt-cleanup',
@@ -169,6 +186,9 @@ module.exports = [
     acceptanceCriteria: ['Superseded fragments are removed from active workflows.'],
     dependencies: [],
     tags: ['cleanup', 'architect'],
-    source: { type: 'system-generated', reference: 'kofiarhin/context-api/docs/PRD.md#75-instruction-sets' },
+    source: {
+      type: 'system-generated',
+      reference: 'kofiarhin/context-api/docs/PRD.md#75-instruction-sets',
+    },
   },
 ];

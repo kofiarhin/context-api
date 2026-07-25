@@ -44,9 +44,9 @@ describe('Vercel gateway configuration', () => {
   });
 
   it('fails closed for partial configuration without echoing values', () => {
-    expect(() =>
-      getVercelConfig({}, { VERCEL_TOKEN: 'secret-token-value' })
-    ).toThrow('ZORO_VERCEL_API_KEY is required.');
+    expect(() => getVercelConfig({}, { VERCEL_TOKEN: 'secret-token-value' })).toThrow(
+      'ZORO_VERCEL_API_KEY is required.'
+    );
 
     try {
       getVercelConfig({}, { VERCEL_TOKEN: 'secret-token-value' });

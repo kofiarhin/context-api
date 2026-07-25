@@ -316,12 +316,12 @@ Branch protection stays authoritative â€” the gateway never requests a bypass â€
 
 Destructive operations require the caller to state what they expect to be true:
 
-| Operation | Required | On mismatch |
-| --- | --- | --- |
-| replace a file | current blob `sha` | `409` |
-| delete a file | current blob `sha` | `409` |
-| fast-forward a branch | `expectedCurrentSha` | `409` |
-| merge a pull request | `expectedHeadSha` | `409` |
+| Operation             | Required             | On mismatch |
+| --------------------- | -------------------- | ----------- |
+| replace a file        | current blob `sha`   | `409`       |
+| delete a file         | current blob `sha`   | `409`       |
+| fast-forward a branch | `expectedCurrentSha` | `409`       |
+| merge a pull request  | `expectedHeadSha`    | `409`       |
 
 A `409` is never retried automatically. Re-read the resource, recompute, and resubmit.
 

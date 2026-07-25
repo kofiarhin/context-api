@@ -19,7 +19,11 @@ router.post('/operations/:operationId', validateHeroku, (req, res, next) => {
 });
 
 for (const descriptor of routes) {
-  router[descriptor.method.toLowerCase()](descriptor.route, validateHeroku, controller.handler(descriptor));
+  router[descriptor.method.toLowerCase()](
+    descriptor.route,
+    validateHeroku,
+    controller.handler(descriptor)
+  );
 }
 
 router.use((req, res, next) => next(new RouteNotFoundError()));

@@ -41,10 +41,7 @@ function buildPaginationMeta(pagination) {
 }
 
 function buildEtag(body) {
-  const digest = crypto
-    .createHash('sha256')
-    .update(JSON.stringify(body))
-    .digest('base64url');
+  const digest = crypto.createHash('sha256').update(JSON.stringify(body)).digest('base64url');
 
   return `W/"${digest}"`;
 }

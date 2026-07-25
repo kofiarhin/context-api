@@ -56,11 +56,7 @@ describe('stable cursor helpers', () => {
     const timestamp = new Date('2026-07-23T10:00:00.000Z');
 
     expect(
-      applyCursor(
-        { status: 'active' },
-        { updatedAt: timestamp, projectId: 'context-api' },
-        SORT
-      )
+      applyCursor({ status: 'active' }, { updatedAt: timestamp, projectId: 'context-api' }, SORT)
     ).toEqual({
       $and: [
         { status: 'active' },

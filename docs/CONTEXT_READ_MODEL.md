@@ -154,14 +154,14 @@ GET /api/v1/context/resolve
 
 ### Query parameters
 
-| Parameter | Required | Meaning |
-| --- | --- | --- |
-| `client` | yes | Agent or application identifier used to select instruction sets |
-| `projectId` | no | Stable project identifier |
-| `taskId` | no | Stable task identifier |
-| `stage` | no | Workflow stage used to select instructions |
-| `maxItems` | no | Maximum instruction sets and conventions, `1` to `20`, default `8` |
-| `updatedAfter` | no | Optional delta bound for instruction sets and conventions |
+| Parameter      | Required | Meaning                                                            |
+| -------------- | -------- | ------------------------------------------------------------------ |
+| `client`       | yes      | Agent or application identifier used to select instruction sets    |
+| `projectId`    | no       | Stable project identifier                                          |
+| `taskId`       | no       | Stable task identifier                                             |
+| `stage`        | no       | Workflow stage used to select instructions                         |
+| `maxItems`     | no       | Maximum instruction sets and conventions, `1` to `20`, default `8` |
+| `updatedAfter` | no       | Optional delta bound for instruction sets and conventions          |
 
 When both a project and task are supplied, the task must belong to that project.
 

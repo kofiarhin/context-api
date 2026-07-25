@@ -437,10 +437,10 @@ A Production target requires a valid production approval object.
 `preview` is the gateway's vocabulary, not Vercel's. `POST /v13/deployments` has no `preview`
 target value and rejects the literal string, so the gateway translates:
 
-| Requested target | Sent upstream |
-| --- | --- |
-| omitted or `preview` | no `target` field at all |
-| `production` | `target: "production"` (approval required) |
+| Requested target     | Sent upstream                              |
+| -------------------- | ------------------------------------------ |
+| omitted or `preview` | no `target` field at all                   |
+| `production`         | `target: "production"` (approval required) |
 
 Any other value is a `400`. A Preview response reports `"target": "preview"` even though Vercel
 returns `target: null`, so a caller never has to infer the environment.

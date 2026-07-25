@@ -7,7 +7,8 @@ const DOMAIN = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2
 
 function cleanObject(value, label) {
   if (value === undefined || value === null) return {};
-  if (typeof value !== 'object' || Array.isArray(value)) throw new ValidationError(`${label} must be an object.`);
+  if (typeof value !== 'object' || Array.isArray(value))
+    throw new ValidationError(`${label} must be an object.`);
   return value;
 }
 
@@ -19,7 +20,9 @@ function validateIdentifier(name, value) {
 }
 
 function validateDomain(value) {
-  const domain = String(value || '').trim().toLowerCase();
+  const domain = String(value || '')
+    .trim()
+    .toLowerCase();
   if (!DOMAIN.test(domain)) throw new ValidationError('domain is invalid.');
   return domain;
 }
@@ -34,10 +37,15 @@ function normalize(source, kind) {
   if (output.alias !== undefined) output.alias = validateDomain(output.alias);
   if (output.limit !== undefined) {
     const limit = Number(output.limit);
-    if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new ValidationError('limit must be between 1 and 100.');
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100)
+      throw new ValidationError('limit must be between 1 and 100.');
     output.limit = limit;
   }
-  if (output.target !== undefined && !Array.isArray(output.target) && !['preview', 'production'].includes(output.target)) {
+  if (
+    output.target !== undefined &&
+    !Array.isArray(output.target) &&
+    !['preview', 'production'].includes(output.target)
+  ) {
     throw new ValidationError('target is invalid.');
   }
   return output;
@@ -60,10 +68,19 @@ function validateVercelBody(req, res, next) {
 function validateVercelParams(req, res, next) {
   const params = {};
   for (const [name, value] of Object.entries(req.params || {})) {
-    params[name] = name === 'domain' || name === 'alias' ? validateDomain(value) : validateIdentifier(name, value);
+    params[name] =
+      name === 'domain' || name === 'alias'
+        ? validateDomain(value)
+        : validateIdentifier(name, value);
   }
   merge(req, { params });
   next();
 }
 
-module.exports = { validateVercelQuery, validateVercelBody, validateVercelParams, validateIdentifier, validateDomain };
+module.exports = {
+  validateVercelQuery,
+  validateVercelBody,
+  validateVercelParams,
+  validateIdentifier,
+  validateDomain,
+};

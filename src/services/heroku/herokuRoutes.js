@@ -27,9 +27,7 @@ const replacements = {
   },
 };
 
-const normalizedCoreRoutes = coreRoutes.map(
-  (route) => replacements[route.operationId] || route
-);
+const normalizedCoreRoutes = coreRoutes.map((route) => replacements[route.operationId] || route);
 
 const runtimeActions = [
   {

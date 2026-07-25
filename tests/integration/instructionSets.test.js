@@ -46,9 +46,7 @@ describe('GET /api/v1/instruction-sets', () => {
     const response = await request(app).get('/api/v1/instruction-sets?client=architect');
 
     expect(response.body.data.length).toBeGreaterThan(0);
-    response.body.data.forEach((entry) =>
-      expect(entry.applicableClients).toContain('architect')
-    );
+    response.body.data.forEach((entry) => expect(entry.applicableClients).toContain('architect'));
   });
 
   it('lists every stored version of a key, including superseded ones', async () => {

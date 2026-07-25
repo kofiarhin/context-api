@@ -3,12 +3,19 @@
 const { AppError } = require('../../utils/errors');
 const { getHerokuConfig } = require('../../config/heroku');
 
-const SENSITIVE_KEYS = /(token|secret|password|private[_-]?key|database_url|mongodb|redis|credential|certificate|api[_-]?key|uri|url)/i;
+const SENSITIVE_KEYS =
+  /(token|secret|password|private[_-]?key|database_url|mongodb|redis|credential|certificate|api[_-]?key|uri|url)/i;
 const SAFE_CONFIG_KEYS = new Set(['NODE_ENV', 'LOG_LEVEL']);
 // Context API self-protection. ZORO_ENGINEERING_API_KEY joins this set because the
 // unified engineering dispatcher can reach Heroku config vars: without the guard an
 // agent could delete the very key that authenticates it.
-const REQUIRED_SELF_KEYS = new Set(['HEROKU_API_TOKEN', 'ZORO_HEROKU_API_KEY', 'ZORO_ENGINEERING_API_KEY', 'MONGODB_URI', 'PORT']);
+const REQUIRED_SELF_KEYS = new Set([
+  'HEROKU_API_TOKEN',
+  'ZORO_HEROKU_API_KEY',
+  'ZORO_ENGINEERING_API_KEY',
+  'MONGODB_URI',
+  'PORT',
+]);
 
 function denied(message) {
   return new AppError('HEROKU_RESOURCE_FORBIDDEN', message, 403);
@@ -33,43 +40,69 @@ function enforce({ input, descriptor, baseEnv = {}, source = process.env }) {
   const mutating = descriptor.method !== 'GET';
 
   if (mutating && !config.herokuMutationsEnabled) throw denied('Heroku mutations are disabled.');
-  if (classification === 'destructive' && !config.herokuDestructiveOperationsEnabled) throw denied('Destructive Heroku operations are disabled.');
-  if (classification === 'billing-sensitive' && !config.herokuBillingOperationsEnabled) throw denied('Billing-sensitive Heroku operations are disabled.');
-  if (classification === 'access-admin' && !config.herokuAccessAdminOperationsEnabled) throw denied('Heroku access administration is disabled.');
-  if (classification === 'private-space-admin' && !config.herokuPrivateSpaceOperationsEnabled) throw denied('Heroku Private Space administration is disabled.');
+  if (classification === 'destructive' && !config.herokuDestructiveOperationsEnabled)
+    throw denied('Destructive Heroku operations are disabled.');
+  if (classification === 'billing-sensitive' && !config.herokuBillingOperationsEnabled)
+    throw denied('Billing-sensitive Heroku operations are disabled.');
+  if (classification === 'access-admin' && !config.herokuAccessAdminOperationsEnabled)
+    throw denied('Heroku access administration is disabled.');
+  if (classification === 'private-space-admin' && !config.herokuPrivateSpaceOperationsEnabled)
+    throw denied('Heroku Private Space administration is disabled.');
 
   requireApproval(input, classification);
 
   if (config.herokuResourceAccess !== 'all') {
-    if (input.app && !matches(input.app, config.herokuAppAllowlist)) throw denied('The Heroku app is not allowlisted.');
-    if (input.team && !matches(input.team, config.herokuTeamAllowlist)) throw denied('The Heroku team is not allowlisted.');
-    if (input.pipeline && !matches(input.pipeline, config.herokuPipelineAllowlist)) throw denied('The Heroku pipeline is not allowlisted.');
-    if (input.space && !matches(input.space, config.herokuSpaceAllowlist)) throw denied('The Heroku Private Space is not allowlisted.');
+    if (input.app && !matches(input.app, config.herokuAppAllowlist))
+      throw denied('The Heroku app is not allowlisted.');
+    if (input.team && !matches(input.team, config.herokuTeamAllowlist))
+      throw denied('The Heroku team is not allowlisted.');
+    if (input.pipeline && !matches(input.pipeline, config.herokuPipelineAllowlist))
+      throw denied('The Heroku pipeline is not allowlisted.');
+    if (input.space && !matches(input.space, config.herokuSpaceAllowlist))
+      throw denied('The Heroku Private Space is not allowlisted.');
   }
 
   const body = input.body || {};
-  if (body.size && config.herokuDynoSizeAllowlist.length && !matches(body.size, config.herokuDynoSizeAllowlist)) {
+  if (
+    body.size &&
+    config.herokuDynoSizeAllowlist.length &&
+    !matches(body.size, config.herokuDynoSizeAllowlist)
+  ) {
     throw denied('The requested dyno size is not allowlisted.');
   }
   if (body.quantity !== undefined && Number(body.quantity) > config.herokuMaxDynoQuantity) {
     throw denied('The requested dyno quantity exceeds the configured maximum.');
   }
-  if (body.plan && config.herokuAddonPlanAllowlist.length && !matches(body.plan, config.herokuAddonPlanAllowlist)) {
+  if (
+    body.plan &&
+    config.herokuAddonPlanAllowlist.length &&
+    !matches(body.plan, config.herokuAddonPlanAllowlist)
+  ) {
     throw denied('The requested add-on plan is not allowlisted.');
   }
 
   const hostname = body.hostname || body.hostname_pattern;
   if (hostname && config.herokuDomainSuffixAllowlist.length) {
-    const allowed = config.herokuDomainSuffixAllowlist.some((suffix) => String(hostname).toLowerCase().endsWith(String(suffix).toLowerCase()));
+    const allowed = config.herokuDomainSuffixAllowlist.some((suffix) =>
+      String(hostname).toLowerCase().endsWith(String(suffix).toLowerCase())
+    );
     if (!allowed) throw denied('The requested domain is not allowlisted.');
   }
 
-  const isSelf = input.app && String(input.app).toLowerCase() === String(config.herokuSelfApp).toLowerCase();
+  const isSelf =
+    input.app && String(input.app).toLowerCase() === String(config.herokuSelfApp).toLowerCase();
   if (isSelf) {
-    if (descriptor.operationId === 'deleteHerokuApp' || descriptor.operationId === 'transferHerokuApp') {
+    if (
+      descriptor.operationId === 'deleteHerokuApp' ||
+      descriptor.operationId === 'transferHerokuApp'
+    ) {
       throw denied('The Context API Heroku app cannot delete or transfer itself.');
     }
-    if ((descriptor.operationId === 'updateHerokuFormation' || descriptor.operationId === 'batchUpdateHerokuFormation') && Number(body.quantity) === 0) {
+    if (
+      (descriptor.operationId === 'updateHerokuFormation' ||
+        descriptor.operationId === 'batchUpdateHerokuFormation') &&
+      Number(body.quantity) === 0
+    ) {
       throw denied('The Context API web formation cannot be scaled to zero.');
     }
     if (descriptor.operationId === 'restartAllHerokuDynos' && body.stopAll === true) {
@@ -80,7 +113,10 @@ function enforce({ input, descriptor, baseEnv = {}, source = process.env }) {
     }
     if (descriptor.operationId === 'updateHerokuConfigVars') {
       for (const key of REQUIRED_SELF_KEYS) {
-        if (Object.prototype.hasOwnProperty.call(body, key) && (body[key] === null || body[key] === '')) {
+        if (
+          Object.prototype.hasOwnProperty.call(body, key) &&
+          (body[key] === null || body[key] === '')
+        ) {
           throw denied('A required Context API configuration value cannot be cleared.');
         }
       }

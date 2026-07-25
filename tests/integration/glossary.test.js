@@ -53,9 +53,9 @@ describe('GET /api/v1/glossary', () => {
     it('matches against an alias', async () => {
       const response = await request(app).get('/api/v1/glossary?query=handoff');
 
-      expect(response.body.data.some((entry) => entry.normalizedKey === 'shared-understanding')).toBe(
-        true
-      );
+      expect(
+        response.body.data.some((entry) => entry.normalizedKey === 'shared-understanding')
+      ).toBe(true);
     });
 
     it('returns an empty collection when nothing matches', async () => {

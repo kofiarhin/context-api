@@ -4,11 +4,18 @@ module.exports = [
   {
     section: 'canonical-files',
     title: 'Canonical files',
-    description: 'Files that hold authoritative Ideas Hub knowledge and what each is responsible for.',
+    description:
+      'Files that hold authoritative Ideas Hub knowledge and what each is responsible for.',
     canonicalFiles: [
       { path: 'README.md', responsibility: 'Repository purpose and navigation.' },
-      { path: 'projects/<project>/overview.md', responsibility: 'Narrative project summary and current focus.' },
-      { path: 'projects/<project>/decisions.md', responsibility: 'Architecture and product decisions with rationale.' },
+      {
+        path: 'projects/<project>/overview.md',
+        responsibility: 'Narrative project summary and current focus.',
+      },
+      {
+        path: 'projects/<project>/decisions.md',
+        responsibility: 'Architecture and product decisions with rationale.',
+      },
       { path: 'workflows/', responsibility: 'Workflow definitions shared across projects.' },
     ],
     repositoryLayout: [],
@@ -78,7 +85,10 @@ module.exports = [
     lifecycleDefinitions: [],
     workflowDefinitions: [
       { name: 'discovery', description: 'Build shared understanding before implementation.' },
-      { name: 'specification', description: 'Turn approved understanding into a technical specification.' },
+      {
+        name: 'specification',
+        description: 'Turn approved understanding into a technical specification.',
+      },
       { name: 'implementation', description: 'Apply approved requirements to a repository.' },
       { name: 'verification', description: 'Confirm behavior before reporting completion.' },
     ],
@@ -127,8 +137,14 @@ module.exports = [
     sourceOfTruthRules: [],
     recordRelationships: [],
     updateRoutingRules: [
-      { change: 'Project narrative or decision rationale', destination: 'Ideas Hub canonical file' },
-      { change: 'Structured project metadata consumed by clients', destination: 'Context API projects domain' },
+      {
+        change: 'Project narrative or decision rationale',
+        destination: 'Ideas Hub canonical file',
+      },
+      {
+        change: 'Structured project metadata consumed by clients',
+        destination: 'Context API projects domain',
+      },
       { change: 'Reusable engineering rule', destination: 'Context API coding conventions domain' },
       { change: 'Durable reviewed lesson', destination: 'Context API learnings domain' },
       { change: 'Terminology definition', destination: 'Context API glossary domain' },
@@ -143,7 +159,9 @@ module.exports = [
     title: 'Legacy notes layout',
     description: 'Superseded structure retained so archived references remain resolvable.',
     canonicalFiles: [],
-    repositoryLayout: [{ path: 'notes/', description: 'Unstructured notes, replaced by projects/.' }],
+    repositoryLayout: [
+      { path: 'notes/', description: 'Unstructured notes, replaced by projects/.' },
+    ],
     lifecycleDefinitions: [],
     workflowDefinitions: [],
     sourceOfTruthRules: [],

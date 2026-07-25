@@ -53,16 +53,12 @@ async function queryLogs(descriptor, input, config, options) {
     tail: false,
     lines: Math.min(Number((input.body || {}).lines || 100), 1500),
   };
-  const session = await client.request(
-    'POST',
-    pathFor(descriptor.upstream, input.params),
-    {
-      baseEnv: config,
-      source: options.source,
-      fetchImpl: options.fetchImpl,
-      body: sessionBody,
-    }
-  );
+  const session = await client.request('POST', pathFor(descriptor.upstream, input.params), {
+    baseEnv: config,
+    source: options.source,
+    fetchImpl: options.fetchImpl,
+    body: sessionBody,
+  });
   const url = session.data && (session.data.logplex_url || session.data.url);
   const logs = await client.fetchLogText(url, {
     baseEnv: config,
@@ -106,7 +102,10 @@ async function execute(descriptor, rawInput, options = {}) {
   ) {
     result.data = policy.redactConfigVars(result.data || {});
   } else if (descriptor.operationId === 'getHerokuAppStack') {
-    result.data = serializer.serialize(descriptor.operationId, result.data && result.data.build_stack);
+    result.data = serializer.serialize(
+      descriptor.operationId,
+      result.data && result.data.build_stack
+    );
   } else {
     result.data = policy.filterCollection(descriptor.operationId, result.data, config);
     result.data = serializer.serialize(descriptor.operationId, result.data);

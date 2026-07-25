@@ -112,14 +112,16 @@ async function fetchLogText(urlValue, options = {}) {
       headers: { 'User-Agent': 'context-api-heroku-gateway/1.0' },
     });
     if (!response.ok) {
-      throw operationalError('HEROKU_LOG_UNAVAILABLE', 'Heroku logs are currently unavailable.', 502);
+      throw operationalError(
+        'HEROKU_LOG_UNAVAILABLE',
+        'Heroku logs are currently unavailable.',
+        502
+      );
     }
     const text = await response.text();
     const truncated = Buffer.byteLength(text, 'utf8') > MAX_LOG_BYTES;
     return {
-      text: truncated
-        ? Buffer.from(text).subarray(0, MAX_LOG_BYTES).toString('utf8')
-        : text,
+      text: truncated ? Buffer.from(text).subarray(0, MAX_LOG_BYTES).toString('utf8') : text,
       truncated,
     };
   } catch (error) {

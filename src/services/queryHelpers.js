@@ -99,9 +99,7 @@ function escapeRegExp(value) {
 }
 
 function failCursor(message) {
-  throw new ValidationError('Request validation failed.', [
-    { field: 'cursor', message },
-  ]);
+  throw new ValidationError('Request validation failed.', [{ field: 'cursor', message }]);
 }
 
 function serializeCursorValue(field, value) {
@@ -149,10 +147,7 @@ function encodeCursor(record, modelName, sort) {
     values[field] = serializeCursorValue(field, record[field]);
   }
 
-  return Buffer.from(
-    JSON.stringify({ model: modelName, values }),
-    'utf8'
-  ).toString('base64url');
+  return Buffer.from(JSON.stringify({ model: modelName, values }), 'utf8').toString('base64url');
 }
 
 function decodeCursor(rawCursor, modelName, sort) {
@@ -161,9 +156,7 @@ function decodeCursor(rawCursor, modelName, sort) {
   }
 
   try {
-    const parsed = JSON.parse(
-      Buffer.from(rawCursor, 'base64url').toString('utf8')
-    );
+    const parsed = JSON.parse(Buffer.from(rawCursor, 'base64url').toString('utf8'));
     const expectedFields = Object.keys(sort);
     const actualFields = Object.keys(parsed.values || {});
 
@@ -176,10 +169,7 @@ function decodeCursor(rawCursor, modelName, sort) {
     }
 
     return Object.fromEntries(
-      expectedFields.map((field) => [
-        field,
-        parseCursorValue(field, parsed.values[field]),
-      ])
+      expectedFields.map((field) => [field, parseCursorValue(field, parsed.values[field])])
     );
   } catch (error) {
     if (error instanceof ValidationError) {
@@ -240,9 +230,7 @@ async function paginate(Model, filter, sort, pagination) {
   const includeTotal = pagination.includeTotal !== false;
   const isCursorMode = pagination.mode === 'cursor';
   const requestedLimit = isCursorMode ? pagination.limit : pagination.pageSize;
-  const cursorValues = isCursorMode
-    ? decodeCursor(pagination.cursor, Model.modelName, sort)
-    : null;
+  const cursorValues = isCursorMode ? decodeCursor(pagination.cursor, Model.modelName, sort) : null;
   const queryFilter = isCursorMode
     ? applyCursor(effectiveFilter, cursorValues, sort)
     : effectiveFilter;
@@ -254,10 +242,7 @@ async function paginate(Model, filter, sort, pagination) {
     query = query.skip(pagination.skip);
   }
 
-  if (
-    pagination.view === 'summary' &&
-    SUMMARY_PROJECTIONS[Model.modelName]
-  ) {
+  if (pagination.view === 'summary' && SUMMARY_PROJECTIONS[Model.modelName]) {
     query = query.select(SUMMARY_PROJECTIONS[Model.modelName]);
   }
 
@@ -267,9 +252,7 @@ async function paginate(Model, filter, sort, pagination) {
   ]);
 
   const hasNextPage = isCursorMode && queriedItems.length > requestedLimit;
-  const items = hasNextPage
-    ? queriedItems.slice(0, requestedLimit)
-    : queriedItems;
+  const items = hasNextPage ? queriedItems.slice(0, requestedLimit) : queriedItems;
   const nextCursor = hasNextPage
     ? encodeCursor(items[items.length - 1], Model.modelName, sort)
     : null;

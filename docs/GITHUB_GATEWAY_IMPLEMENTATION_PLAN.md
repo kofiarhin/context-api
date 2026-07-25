@@ -114,19 +114,19 @@ The Custom GPT OpenAPI schema is configured outside the repository and must be u
 
 ## 5. Phase Overview
 
-| Phase | Outcome |
-| --- | --- |
-| 0 | Revalidate repository state and establish test fixtures |
-| 1 | Add dependency and validated GitHub configuration |
-| 2 | Add dedicated bearer authentication |
-| 3 | Add GitHub client, policy, serializer, and error translation |
-| 4 | Implement repository and content reads |
-| 5 | Implement branch listing, creation, and safe updates |
-| 6 | Implement default-branch-capable file writes and deletes |
-| 7 | Implement pull-request lifecycle and merge operations |
-| 8 | Integrate routing, body limits, and database independence |
-| 9 | Complete regression coverage and documentation |
-| 10 | Deploy, update Zoro's Action, and verify end to end |
+| Phase | Outcome                                                      |
+| ----- | ------------------------------------------------------------ |
+| 0     | Revalidate repository state and establish test fixtures      |
+| 1     | Add dependency and validated GitHub configuration            |
+| 2     | Add dedicated bearer authentication                          |
+| 3     | Add GitHub client, policy, serializer, and error translation |
+| 4     | Implement repository and content reads                       |
+| 5     | Implement branch listing, creation, and safe updates         |
+| 6     | Implement default-branch-capable file writes and deletes     |
+| 7     | Implement pull-request lifecycle and merge operations        |
+| 8     | Integrate routing, body limits, and database independence    |
+| 9     | Complete regression coverage and documentation               |
+| 10    | Deploy, update Zoro's Action, and verify end to end          |
 
 ## 6. Phase 0 — Revalidation and Test Harness
 
@@ -367,15 +367,15 @@ Extend `src/middleware/errorHandler.js` or introduce a focused GitHub error tran
 
 Translate common Octokit failures:
 
-| GitHub status | Application error |
-| ---: | --- |
-| 401 | `GITHUB_UNAVAILABLE` unless caused by Context API bearer auth |
-| 403 | `GITHUB_FORBIDDEN` |
-| 404 | `GITHUB_NOT_FOUND` |
-| 409 | `GITHUB_CONFLICT` |
-| 422 | `GITHUB_VALIDATION_ERROR` or `GITHUB_CONFLICT` when the reason is state conflict |
-| 429 | `GITHUB_UNAVAILABLE` |
-| 500-599 | `GITHUB_UNAVAILABLE` |
+| GitHub status | Application error                                                                |
+| ------------: | -------------------------------------------------------------------------------- |
+|           401 | `GITHUB_UNAVAILABLE` unless caused by Context API bearer auth                    |
+|           403 | `GITHUB_FORBIDDEN`                                                               |
+|           404 | `GITHUB_NOT_FOUND`                                                               |
+|           409 | `GITHUB_CONFLICT`                                                                |
+|           422 | `GITHUB_VALIDATION_ERROR` or `GITHUB_CONFLICT` when the reason is state conflict |
+|           429 | `GITHUB_UNAVAILABLE`                                                             |
+|       500-599 | `GITHUB_UNAVAILABLE`                                                             |
 
 Discard raw upstream bodies. Preserve only safe high-level details.
 
@@ -1020,20 +1020,20 @@ Verify every claimed action directly in GitHub.
 
 ## 17. Test Matrix
 
-| Area | Success | Validation | Auth | Conflict | Permission | Upstream |
-| --- | --- | --- | --- | --- | --- | --- |
-| repositories | list/paginate | invalid page | 401 | n/a | 403 | 502 |
-| contents | file/directory | invalid path | 401 | n/a | 403 | 404/502 |
-| branches list | list/paginate | invalid repo | 401 | n/a | 403 | 404/502 |
-| branch create | explicit/default base | invalid ref | 401 | exists | 403 | 422/502 |
-| branch update | feature/default | invalid SHA | 401 | stale/non-FF | protected | 422/502 |
-| file create | feature/default | invalid path/content | 401 | exists | protected/workflow | 422/502 |
-| file update | feature/default | invalid body | 401 | stale SHA | protected/workflow | 422/502 |
-| file delete | feature/default | invalid body | 401 | stale SHA | protected/workflow | 422/502 |
-| PR create | draft/open | invalid refs | 401 | duplicate | 403 | 422/502 |
-| PR get | open/closed | invalid number | 401 | n/a | 403 | 404/502 |
-| PR update | edit/close/reopen | empty patch | 401 | state conflict | 403 | 422/502 |
-| PR merge | merge/squash/rebase | invalid method | 401 | stale/conflict | checks/protection | 422/502 |
+| Area          | Success               | Validation           | Auth | Conflict       | Permission         | Upstream |
+| ------------- | --------------------- | -------------------- | ---- | -------------- | ------------------ | -------- |
+| repositories  | list/paginate         | invalid page         | 401  | n/a            | 403                | 502      |
+| contents      | file/directory        | invalid path         | 401  | n/a            | 403                | 404/502  |
+| branches list | list/paginate         | invalid repo         | 401  | n/a            | 403                | 404/502  |
+| branch create | explicit/default base | invalid ref          | 401  | exists         | 403                | 422/502  |
+| branch update | feature/default       | invalid SHA          | 401  | stale/non-FF   | protected          | 422/502  |
+| file create   | feature/default       | invalid path/content | 401  | exists         | protected/workflow | 422/502  |
+| file update   | feature/default       | invalid body         | 401  | stale SHA      | protected/workflow | 422/502  |
+| file delete   | feature/default       | invalid body         | 401  | stale SHA      | protected/workflow | 422/502  |
+| PR create     | draft/open            | invalid refs         | 401  | duplicate      | 403                | 422/502  |
+| PR get        | open/closed           | invalid number       | 401  | n/a            | 403                | 404/502  |
+| PR update     | edit/close/reopen     | empty patch          | 401  | state conflict | 403                | 422/502  |
+| PR merge      | merge/squash/rebase   | invalid method       | 401  | stale/conflict | checks/protection  | 422/502  |
 
 ## 18. Security Review Checklist
 

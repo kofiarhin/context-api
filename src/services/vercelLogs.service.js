@@ -11,15 +11,19 @@ function createLogsService(options = {}) {
   return Object.freeze({
     async getDeploymentLogs({ deployment, limit = 50, since, until }) {
       const boundedLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
-      const payload = await client.request('GET', `/v3/deployments/${encodeURIComponent(deployment)}/events`, {
-        query: {
-          limit: boundedLimit,
-          follow: 0,
-          direction: 'backward',
-          since,
-          until,
-        },
-      });
+      const payload = await client.request(
+        'GET',
+        `/v3/deployments/${encodeURIComponent(deployment)}/events`,
+        {
+          query: {
+            limit: boundedLimit,
+            follow: 0,
+            direction: 'backward',
+            since,
+            until,
+          },
+        }
+      );
       const events = Array.isArray(payload) ? payload : [];
       return {
         data: events.slice(0, boundedLimit).map(serializeLogEvent),

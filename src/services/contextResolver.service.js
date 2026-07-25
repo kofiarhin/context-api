@@ -80,21 +80,14 @@ function latestVersionPerKey(records, maxItems) {
 }
 
 function buildRevision(parts) {
-  const fingerprint = parts
-    .filter(Boolean)
-    .map((part) => ({
-      id: part.key || part.projectId || part.taskId,
-      version: part.version || null,
-      updatedAt:
-        part.updatedAt instanceof Date
-          ? part.updatedAt.toISOString()
-          : part.updatedAt || null,
-    }));
+  const fingerprint = parts.filter(Boolean).map((part) => ({
+    id: part.key || part.projectId || part.taskId,
+    version: part.version || null,
+    updatedAt:
+      part.updatedAt instanceof Date ? part.updatedAt.toISOString() : part.updatedAt || null,
+  }));
 
-  return crypto
-    .createHash('sha256')
-    .update(JSON.stringify(fingerprint))
-    .digest('base64url');
+  return crypto.createHash('sha256').update(JSON.stringify(fingerprint)).digest('base64url');
 }
 
 async function resolveContext({
@@ -144,10 +137,7 @@ async function resolveContext({
 
   const conventionScope = effectiveProjectId
     ? {
-        $or: [
-          { scope: 'global' },
-          { scope: 'project', projectId: effectiveProjectId },
-        ],
+        $or: [{ scope: 'global' }, { scope: 'project', projectId: effectiveProjectId }],
       }
     : { scope: 'global' };
   const conventionFilter = addUpdatedAfter(
@@ -168,10 +158,7 @@ async function resolveContext({
       .lean(),
   ]);
 
-  const instructionSets = latestVersionPerKey(
-    instructionCandidates,
-    boundedMaxItems
-  );
+  const instructionSets = latestVersionPerKey(instructionCandidates, boundedMaxItems);
   const revision = buildRevision([
     profile,
     project,

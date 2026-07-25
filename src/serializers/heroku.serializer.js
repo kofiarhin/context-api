@@ -1,6 +1,7 @@
 'use strict';
 
-const SECRET_KEY = /(^|_)(authorization|token|secret|password|private_key|pre_shared_key|api_key|credential|credentials|payment_method|card|bank_account)($|_)/i;
+const SECRET_KEY =
+  /(^|_)(authorization|token|secret|password|private_key|pre_shared_key|api_key|credential|credentials|payment_method|card|bank_account)($|_)/i;
 const SENSITIVE_URL_KEY = /(logplex_url|signed_url|download_url|upload_url)/i;
 const SOURCE_URL_OPERATIONS = new Set(['createHerokuSource']);
 const REDACTED = '[REDACTED]';

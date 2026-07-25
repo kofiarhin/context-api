@@ -86,9 +86,7 @@ function createDispatcher(options = {}) {
       const normalized = normalizeInput(input);
       const definition = operations[normalized.operation];
       if (!definition) {
-        throw new ValidationError(
-          `operation is not allowed by the ${category} Vercel dispatcher.`
-        );
+        throw new ValidationError(`operation is not allowed by the ${category} Vercel dispatcher.`);
       }
 
       const service = services[definition.service];
@@ -100,9 +98,7 @@ function createDispatcher(options = {}) {
       const parameters = {
         ...normalized.parameters,
         ...(normalized.approval === undefined ? {} : { approval: normalized.approval }),
-        ...(normalized.confirmation === undefined
-          ? {}
-          : { confirmation: normalized.confirmation }),
+        ...(normalized.confirmation === undefined ? {} : { confirmation: normalized.confirmation }),
       };
 
       return {

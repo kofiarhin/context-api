@@ -4,7 +4,14 @@ const { MIN_BEARER_KEY_LENGTH } = require('./env');
 
 function split(raw) {
   if (!raw) return [];
-  return [...new Set(String(raw).split(',').map((item) => item.trim()).filter(Boolean))];
+  return [
+    ...new Set(
+      String(raw)
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+    ),
+  ];
 }
 
 function parseBoolean(raw) {
@@ -43,9 +50,13 @@ function getVercelConfig(baseEnv = {}, source = process.env) {
     vercelTeamId: teamId,
     vercelTeamSlug: source.VERCEL_TEAM_SLUG || baseEnv.vercelTeamSlug || null,
     zoroVercelApiKey: key,
-    vercelProjectAllowlist: split(source.VERCEL_PROJECT_ALLOWLIST || baseEnv.vercelProjectAllowlist),
+    vercelProjectAllowlist: split(
+      source.VERCEL_PROJECT_ALLOWLIST || baseEnv.vercelProjectAllowlist
+    ),
     vercelDomainAllowlist: split(source.VERCEL_DOMAIN_ALLOWLIST || baseEnv.vercelDomainAllowlist),
-    vercelRepositoryAllowlist: split(source.VERCEL_REPOSITORY_ALLOWLIST || baseEnv.vercelRepositoryAllowlist),
+    vercelRepositoryAllowlist: split(
+      source.VERCEL_REPOSITORY_ALLOWLIST || baseEnv.vercelRepositoryAllowlist
+    ),
     // The branch Vercel deploys to Production. Optional: when it is unset the
     // gateway reads the project's linked production branch instead. Like the
     // allowlists it does not make the gateway "configured", so setting it alone

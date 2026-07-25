@@ -15,8 +15,7 @@ function secretsMatch(supplied, expected) {
 }
 
 function requireZoroEngineeringAuth(options = {}) {
-  const config =
-    options.config || getZoroEngineeringConfig(options.source || process.env);
+  const config = options.config || getZoroEngineeringConfig(options.source || process.env);
 
   return function zoroEngineeringAuth(req, res, next) {
     if (!config.apiKey) {

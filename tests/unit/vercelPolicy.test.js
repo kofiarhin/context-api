@@ -100,9 +100,9 @@ describe('Vercel gateway policy', () => {
   });
 
   it('requires a Git-connected Preview deployment to name its branch', () => {
-    expect(() => assertPreviewBranchNamed({ gitSource: { type: 'github', repo: 'shop' } }, [])).toThrow(
-      ValidationError
-    );
+    expect(() =>
+      assertPreviewBranchNamed({ gitSource: { type: 'github', repo: 'shop' } }, [])
+    ).toThrow(ValidationError);
     expect(() => assertPreviewBranchNamed({ gitMetadata: { commitSha: 'abc123' } }, [])).toThrow(
       ValidationError
     );
@@ -156,7 +156,10 @@ describe('Vercel gateway policy', () => {
   });
 
   it('never permits destructive operations when disabled', () => {
-    const disabled = createPolicy({}, { source: { ...source, VERCEL_ALLOW_DESTRUCTIVE_OPERATIONS: 'false' } });
+    const disabled = createPolicy(
+      {},
+      { source: { ...source, VERCEL_ALLOW_DESTRUCTIVE_OPERATIONS: 'false' } }
+    );
     expect(() =>
       disabled.requireDestructiveConfirmation(
         {

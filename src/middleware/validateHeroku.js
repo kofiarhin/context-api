@@ -54,7 +54,10 @@ function validateApproval(approval) {
 
 function validateMutationBody(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return;
-  if (body.quantity !== undefined && (!Number.isInteger(Number(body.quantity)) || Number(body.quantity) < 0)) {
+  if (
+    body.quantity !== undefined &&
+    (!Number.isInteger(Number(body.quantity)) || Number(body.quantity) < 0)
+  ) {
     throw new ValidationError('Heroku dyno quantity must be a non-negative integer.');
   }
   for (const field of ['url', 'source_blob_url', 'callbackUrl']) {
@@ -80,7 +83,8 @@ function validateBody(body, dispatch = false) {
 
   if (dispatch) {
     for (const key of Object.keys(body)) {
-      if (!DISPATCH_FIELDS.has(key)) throw new ValidationError(`Unknown Heroku dispatcher field: ${key}.`);
+      if (!DISPATCH_FIELDS.has(key))
+        throw new ValidationError(`Unknown Heroku dispatcher field: ${key}.`);
     }
     validateMap('params', body.params);
     validateMap('query', body.query);

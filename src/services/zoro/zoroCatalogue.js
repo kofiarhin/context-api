@@ -76,8 +76,7 @@ function contextWrite(domain, action) {
     target: 'contextWrite',
     method: action,
     domain,
-    classification:
-      action === 'archive' ? CLASSIFICATIONS.DESTRUCTIVE : CLASSIFICATIONS.WRITE,
+    classification: action === 'archive' ? CLASSIFICATIONS.DESTRUCTIVE : CLASSIFICATIONS.WRITE,
     ...(action === 'archive'
       ? { confirmationResourceType: domain, confirmationFrom: 'identifier' }
       : {}),
@@ -138,10 +137,24 @@ const ENGINEERING_WRITE_OPERATIONS = Object.freeze({
 const ENGINEERING_ARCHIVE_OPERATIONS = buildDomainOperations('archive');
 
 const GITHUB_READ_OPERATIONS = Object.freeze({
-  listRepositories: { target: 'github', method: 'listRepositories', collection: true, classification: CLASSIFICATIONS.READ },
+  listRepositories: {
+    target: 'github',
+    method: 'listRepositories',
+    collection: true,
+    classification: CLASSIFICATIONS.READ,
+  },
   getContent: { target: 'github', method: 'getContent', classification: CLASSIFICATIONS.READ },
-  listBranches: { target: 'github', method: 'listBranches', collection: true, classification: CLASSIFICATIONS.READ },
-  getPullRequest: { target: 'github', method: 'getPullRequest', classification: CLASSIFICATIONS.READ },
+  listBranches: {
+    target: 'github',
+    method: 'listBranches',
+    collection: true,
+    classification: CLASSIFICATIONS.READ,
+  },
+  getPullRequest: {
+    target: 'github',
+    method: 'getPullRequest',
+    classification: CLASSIFICATIONS.READ,
+  },
 });
 
 const GITHUB_WRITE_OPERATIONS = Object.freeze({
@@ -185,7 +198,11 @@ const GITHUB_WRITE_OPERATIONS = Object.freeze({
 });
 
 const GITHUB_REVIEW_OPERATIONS = Object.freeze({
-  getPullRequest: { target: 'github', method: 'getPullRequest', classification: CLASSIFICATIONS.READ },
+  getPullRequest: {
+    target: 'github',
+    method: 'getPullRequest',
+    classification: CLASSIFICATIONS.READ,
+  },
   updatePullRequest: {
     target: 'github',
     method: 'updatePullRequest',

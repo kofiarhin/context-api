@@ -63,7 +63,7 @@ Every public route takes the domain's client-provided identifier (`projectId`, `
 
 `DELETE` sets `status: 'archived'` + `archivedAt` and is idempotent. `queryHelpers.paginate` injects
 `status: { $ne: 'archived' }` unless the caller filtered on `status` explicitly, so list reads hide
-archived records while `?status=archived` reveals them. Single-resource reads *do* return archived
+archived records while `?status=archived` reveals them. Single-resource reads _do_ return archived
 records so an agent can restore one by `PATCH`ing a non-archived status — `crud.service.updateRecord`
 clears `archivedAt` on that transition.
 
@@ -74,7 +74,7 @@ clears `archivedAt` on that transition.
 - Request bodies: `validation/write.js` rejects unknown fields, `MANAGED_FIELDS`
   (`_id`, `__v`, `createdAt`, `updatedAt`, `archivedAt`), and — on `patch` — the identifier field
   itself. Mongoose is additionally constructed with `strict: 'throw'`.
-- Query strings: `validation/common.js` `validateQuery` rejects unknown *and* repeated parameters,
+- Query strings: `validation/common.js` `validateQuery` rejects unknown _and_ repeated parameters,
   so a typo'd filter is a `400` rather than a silently wider result set.
 - Responses: `src/serializers/` maps field by field. Nothing is spread from a document, so a new
   internal field cannot leak. `applyBaseOptions` strips `_id`/`__v` as defence in depth.
@@ -98,14 +98,14 @@ regression. Don't reintroduce environment branching here.
 ### Seeds
 
 `src/seeds/registry.js` orders domains by dependency and declares each one's `identity` fields.
-`runner.js` validates the *entire* set before writing anything (so a bad cross-reference can't leave
+`runner.js` validates the _entire_ set before writing anything (so a bad cross-reference can't leave
 a half-seeded database), then upserts by identity. Idempotency is decided by explicit value
 comparison in `isUnchanged`, not Mongoose dirty-checking, which is unreliable for arrays.
 
 ### Precedence
 
 `services/precedence.service.js` implements SPEC §8.2 conflict resolution: project scope > global,
-approved/active > draft, then priority, version, `updatedAt`. `resolve()` returns the winner *and*
+approved/active > draft, then priority, version, `updatedAt`. `resolve()` returns the winner _and_
 what it outranked so callers can surface conflicts rather than discard them.
 
 ## The GitHub gateway (`/api/v1/github`)
@@ -122,7 +122,7 @@ It is deliberately unlike the public context API in four ways, and these differe
   whole-file content. It **skips `requireDatabase`** — these routes talk to GitHub, not Mongo — so a
   DB outage must not take them down (`tests/integration/githubDatabaseIndependence.test.js`).
 - **Authenticated, unlike the rest of the MVP.** `requireGithubActionAuth` demands a bearer token
-  matching `ZORO_GITHUB_API_KEY` via constant-time comparison; it fails *closed* if the key is
+  matching `ZORO_GITHUB_API_KEY` via constant-time comparison; it fails _closed_ if the key is
   unconfigured. The token is never logged, attached to `req`, or echoed. `requireGithubRepositoryAccess`
   optionally narrows scope to `GITHUB_REPOSITORY_ALLOWLIST` (owner/repo, comma-separated).
 - **Server-side write policy in `src/services/githubPolicy.js`.** Writes at or beneath
@@ -135,7 +135,7 @@ It is deliberately unlike the public context API in four ways, and these differe
   Octokit error never escapes — `githubErrors.js` translates it into an `AppError` subclass.
 
 Config is validated in `src/config/env.js` (`loadGithubConfig`): all five `GITHUB_*`/`ZORO_*` vars are
-required in production and fail startup if missing; locally the gateway is optional, but supplying *any*
+required in production and fail startup if missing; locally the gateway is optional, but supplying _any_
 one variable makes the whole set required so a typo surfaces immediately. `npm run verify:github-gateway`
 is a static release check that the OpenAPI schema (`docs/openapi/zoro-action.yaml`), spec, plan, and
 production URL stay in sync — run it (or `npm run verify`) before shipping gateway changes.
@@ -161,7 +161,7 @@ Two invariants make this safe, and both are load-bearing:
 `vercelDispatcher.CATALOG` and `herokuRoutes` allowlists rather than restating them, so the unified
 surface cannot drift from the direct gateways.
 
-`src/services/zoro/zoroPolicy.js` adds only *dispatcher-level* guards: explicit Kofi approval for
+`src/services/zoro/zoroPolicy.js` adds only _dispatcher-level_ guards: explicit Kofi approval for
 merge/production-sensitive/security-sensitive/billing/access-admin/destructive work, an exact
 resource-naming confirmation for destructive work, and a required expected SHA/ETag/release for
 state-sensitive operations. Provider policy — GitHub workflow protection, Vercel allowlists, Heroku

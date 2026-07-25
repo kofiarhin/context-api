@@ -38,21 +38,21 @@ function schemaFor(routes, title) {
             },
           }),
       responses: {
-        '200': { description: 'Successful normalized Heroku response' },
-        '201': { description: 'Heroku resource created' },
-        '202': { description: 'Heroku accepted an asynchronous operation' },
-        '204': { description: 'Heroku operation completed without a response body' },
-        '400': { description: 'Invalid request' },
-        '401': { description: 'Missing or invalid gateway bearer key' },
-        '402': { description: 'Billing verification required' },
-        '403': { description: 'Policy or approval denied the operation' },
-        '404': { description: 'Resource not found' },
-        '409': { description: 'Resource conflict' },
-        '412': { description: 'Stale resource precondition' },
-        '422': { description: 'Heroku rejected the request' },
-        '429': { description: 'Rate limited' },
-        '502': { description: 'Heroku unavailable' },
-        '504': { description: 'Heroku request timed out' },
+        200: { description: 'Successful normalized Heroku response' },
+        201: { description: 'Heroku resource created' },
+        202: { description: 'Heroku accepted an asynchronous operation' },
+        204: { description: 'Heroku operation completed without a response body' },
+        400: { description: 'Invalid request' },
+        401: { description: 'Missing or invalid gateway bearer key' },
+        402: { description: 'Billing verification required' },
+        403: { description: 'Policy or approval denied the operation' },
+        404: { description: 'Resource not found' },
+        409: { description: 'Resource conflict' },
+        412: { description: 'Stale resource precondition' },
+        422: { description: 'Heroku rejected the request' },
+        429: { description: 'Rate limited' },
+        502: { description: 'Heroku unavailable' },
+        504: { description: 'Heroku request timed out' },
       },
     };
   }
@@ -79,7 +79,8 @@ function group(route) {
 
 function chunks(values, size = MAX_OPERATIONS) {
   const output = [];
-  for (let index = 0; index < values.length; index += size) output.push(values.slice(index, index + size));
+  for (let index = 0; index < values.length; index += size)
+    output.push(values.slice(index, index + size));
   return output;
 }
 
@@ -103,7 +104,10 @@ function outputs() {
 
 function countOperations(schema) {
   return Object.values(schema.paths).reduce(
-    (count, pathItem) => count + Object.keys(pathItem).filter((key) => ['get', 'post', 'patch', 'delete'].includes(key)).length,
+    (count, pathItem) =>
+      count +
+      Object.keys(pathItem).filter((key) => ['get', 'post', 'patch', 'delete'].includes(key))
+        .length,
     0
   );
 }

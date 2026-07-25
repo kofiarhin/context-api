@@ -26,7 +26,9 @@ describe('GET /api/v1/ideas-hub', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.data.length).toBeGreaterThan(0);
-    response.body.data.forEach((section) => expect(['active', 'approved']).toContain(section.status));
+    response.body.data.forEach((section) =>
+      expect(['active', 'approved']).toContain(section.status)
+    );
   });
 
   it('excludes superseded sections from the default collection', async () => {

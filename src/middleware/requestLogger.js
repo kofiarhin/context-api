@@ -14,7 +14,9 @@ function requestLogger(req, res, next) {
 
   res.on('finish', () => {
     const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
-    const routeTemplate = req.route ? `${req.baseUrl}${req.route.path}` : req.baseUrl || 'unmatched';
+    const routeTemplate = req.route
+      ? `${req.baseUrl}${req.route.path}`
+      : req.baseUrl || 'unmatched';
 
     logger.info('request.completed', {
       correlationId: req.correlationId,

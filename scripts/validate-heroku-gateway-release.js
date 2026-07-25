@@ -37,15 +37,19 @@ for (const file of required) {
 
 const ids = routes.map((route) => route.operationId);
 if (new Set(ids).size !== ids.length) throw new Error('Heroku operation IDs must be unique.');
-if (routes.length < 110) throw new Error(`Expected full Heroku catalogue, found only ${routes.length} routes.`);
+if (routes.length < 110)
+  throw new Error(`Expected full Heroku catalogue, found only ${routes.length} routes.`);
 
 const app = read('src/app.js');
 if (!app.includes("'/api/v1/heroku'")) throw new Error('Heroku gateway is not mounted.');
-if (!app.includes('requireHerokuActionAuth')) throw new Error('Heroku gateway authentication is not mounted.');
-if (!app.includes('HEROKU_JSON_BODY_LIMIT')) throw new Error('Heroku route-specific body limit is missing.');
+if (!app.includes('requireHerokuActionAuth'))
+  throw new Error('Heroku gateway authentication is not mounted.');
+if (!app.includes('HEROKU_JSON_BODY_LIMIT'))
+  throw new Error('Heroku route-specific body limit is missing.');
 
 const router = read('src/routes/v1/heroku.js');
-if (!router.includes("'/operations/:operationId'")) throw new Error('Heroku GPT operation dispatcher is missing.');
+if (!router.includes("'/operations/:operationId'"))
+  throw new Error('Heroku GPT operation dispatcher is missing.');
 if (!router.includes('validateHeroku')) throw new Error('Heroku validation middleware is missing.');
 
 const policy = read('src/services/heroku/herokuPolicy.js');
@@ -77,6 +81,7 @@ for (const [name, schema] of generated) {
 const dispatchSchema = JSON.parse(read('docs/openapi/zoro-heroku-action.yaml'));
 const dispatch = dispatchSchema.paths['/api/v1/heroku/operations/{operationId}'];
 if (!dispatch || !dispatch.post) throw new Error('Heroku dispatcher OpenAPI operation is missing.');
-if (dispatch.post.operationId !== 'executeHerokuOperation') throw new Error('Heroku dispatcher operation ID is invalid.');
+if (dispatch.post.operationId !== 'executeHerokuOperation')
+  throw new Error('Heroku dispatcher operation ID is invalid.');
 
 console.log(`Heroku gateway release validation passed (${routes.length} routes).`);

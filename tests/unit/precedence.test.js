@@ -1,6 +1,10 @@
 'use strict';
 
-const { comparePrecedence, sortByPrecedence, resolve } = require('../../src/services/precedence.service');
+const {
+  comparePrecedence,
+  sortByPrecedence,
+  resolve,
+} = require('../../src/services/precedence.service');
 
 function record(overrides) {
   return {
@@ -58,7 +62,12 @@ describe('precedence', () => {
   });
 
   it('applies scope before status, so a project draft outranks a global active record', () => {
-    const globalActive = record({ key: 'global', scope: 'global', status: 'active', priority: 999 });
+    const globalActive = record({
+      key: 'global',
+      scope: 'global',
+      status: 'active',
+      priority: 999,
+    });
     const projectDraft = record({ key: 'project', scope: 'project', status: 'draft', priority: 0 });
 
     expect(resolve([globalActive, projectDraft]).selected.key).toBe('project');

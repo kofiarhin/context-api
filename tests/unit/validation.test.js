@@ -1,6 +1,10 @@
 'use strict';
 
-const { validateQuery, validateIdentifierParam, PAGINATION_DEFAULTS } = require('../../src/validation/common');
+const {
+  validateQuery,
+  validateIdentifierParam,
+  PAGINATION_DEFAULTS,
+} = require('../../src/validation/common');
 const schemas = require('../../src/validation/schemas');
 const { ValidationError } = require('../../src/utils/errors');
 
@@ -84,9 +88,10 @@ describe('validateQuery', () => {
   });
 
   it('rejects an unparseable date', () => {
-    expectValidationError(() => validateQuery({ updatedAfter: 'last-tuesday' }, SCHEMA), [
-      'updatedAfter',
-    ]);
+    expectValidationError(
+      () => validateQuery({ updatedAfter: 'last-tuesday' }, SCHEMA),
+      ['updatedAfter']
+    );
   });
 
   it('rejects a repeated parameter rather than picking one value', () => {
@@ -98,11 +103,10 @@ describe('validateQuery', () => {
   });
 
   it('reports every problem in one error', () => {
-    expectValidationError(() => validateQuery({ status: 'nope', unknown: '1', page: 'x' }, SCHEMA), [
-      'unknown',
-      'status',
-      'page',
-    ]);
+    expectValidationError(
+      () => validateQuery({ status: 'nope', unknown: '1', page: 'x' }, SCHEMA),
+      ['unknown', 'status', 'page']
+    );
   });
 
   describe('pagination boundaries', () => {

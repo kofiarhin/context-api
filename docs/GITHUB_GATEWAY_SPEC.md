@@ -214,12 +214,7 @@ app.use(
   githubRouter
 );
 
-app.use(
-  '/api/v1',
-  express.json({ limit: JSON_BODY_LIMIT }),
-  requireDatabase,
-  v1Router
-);
+app.use('/api/v1', express.json({ limit: JSON_BODY_LIMIT }), requireDatabase, v1Router);
 ```
 
 The current global JSON parser must be refactored so GitHub file operations can use a route-specific limit while existing context routes retain the 10 KB limit.
@@ -318,20 +313,20 @@ The initial version supports UTF-8 text only.
 
 The GitHub gateway adds 12 operations. Combined with the 15 current Action operations, the total is 27, below the 30-operation limit.
 
-| Method | Path | Operation ID |
-| --- | --- | --- |
-| GET | `/repositories` | `listGithubRepositories` |
-| GET | `/contents` | `getGithubContent` |
-| GET | `/branches` | `listGithubBranches` |
-| POST | `/branches` | `createGithubBranch` |
-| PATCH | `/branches/{branch}` | `updateGithubBranch` |
-| POST | `/files` | `createGithubFile` |
-| PATCH | `/files` | `updateGithubFile` |
-| DELETE | `/files` | `deleteGithubFile` |
-| POST | `/pull-requests` | `createGithubPullRequest` |
-| GET | `/pull-requests/{pullNumber}` | `getGithubPullRequest` |
-| PATCH | `/pull-requests/{pullNumber}` | `updateGithubPullRequest` |
-| POST | `/pull-requests/{pullNumber}/merge` | `mergeGithubPullRequest` |
+| Method | Path                                | Operation ID              |
+| ------ | ----------------------------------- | ------------------------- |
+| GET    | `/repositories`                     | `listGithubRepositories`  |
+| GET    | `/contents`                         | `getGithubContent`        |
+| GET    | `/branches`                         | `listGithubBranches`      |
+| POST   | `/branches`                         | `createGithubBranch`      |
+| PATCH  | `/branches/{branch}`                | `updateGithubBranch`      |
+| POST   | `/files`                            | `createGithubFile`        |
+| PATCH  | `/files`                            | `updateGithubFile`        |
+| DELETE | `/files`                            | `deleteGithubFile`        |
+| POST   | `/pull-requests`                    | `createGithubPullRequest` |
+| GET    | `/pull-requests/{pullNumber}`       | `getGithubPullRequest`    |
+| PATCH  | `/pull-requests/{pullNumber}`       | `updateGithubPullRequest` |
+| POST   | `/pull-requests/{pullNumber}/merge` | `mergeGithubPullRequest`  |
 
 ## 12. Endpoint Specifications
 
@@ -957,7 +952,11 @@ router.patch(
 router.post('/files', validateGithubBody('createFile'), controller.createFile);
 router.patch('/files', validateGithubBody('updateFile'), controller.updateFile);
 router.delete('/files', validateGithubBody('deleteFile'), controller.deleteFile);
-router.post('/pull-requests', validateGithubBody('createPullRequest'), controller.createPullRequest);
+router.post(
+  '/pull-requests',
+  validateGithubBody('createPullRequest'),
+  controller.createPullRequest
+);
 router.get(
   '/pull-requests/:pullNumber',
   validateGithubParam('pullNumber'),
@@ -982,15 +981,15 @@ router.post(
 
 Add application errors where needed:
 
-| Code | HTTP | Meaning |
-| --- | ---: | --- |
-| `AUTHENTICATION_REQUIRED` | 401 | Missing or invalid Context API bearer token |
-| `GITHUB_FORBIDDEN` | 403 | GitHub or server policy denied the operation |
-| `GITHUB_NOT_FOUND` | 404 | Repository, ref, file, branch, commit, or pull request not found |
-| `GITHUB_CONFLICT` | 409 | Stale SHA, existing resource, branch conflict, merge conflict, or state conflict |
-| `UNSUPPORTED_CONTENT` | 415 | Binary or unsupported repository content |
-| `GITHUB_VALIDATION_ERROR` | 422 | GitHub rejected a semantically invalid operation |
-| `GITHUB_UNAVAILABLE` | 502 | GitHub unavailable or returned an unexpected upstream response |
+| Code                      | HTTP | Meaning                                                                          |
+| ------------------------- | ---: | -------------------------------------------------------------------------------- |
+| `AUTHENTICATION_REQUIRED` |  401 | Missing or invalid Context API bearer token                                      |
+| `GITHUB_FORBIDDEN`        |  403 | GitHub or server policy denied the operation                                     |
+| `GITHUB_NOT_FOUND`        |  404 | Repository, ref, file, branch, commit, or pull request not found                 |
+| `GITHUB_CONFLICT`         |  409 | Stale SHA, existing resource, branch conflict, merge conflict, or state conflict |
+| `UNSUPPORTED_CONTENT`     |  415 | Binary or unsupported repository content                                         |
+| `GITHUB_VALIDATION_ERROR` |  422 | GitHub rejected a semantically invalid operation                                 |
+| `GITHUB_UNAVAILABLE`      |  502 | GitHub unavailable or returned an unexpected upstream response                   |
 
 The centralized translator must discard raw upstream error bodies. Safe details may include:
 

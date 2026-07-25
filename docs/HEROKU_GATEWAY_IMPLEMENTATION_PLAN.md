@@ -745,22 +745,22 @@ Zoro must continue all unaffected work before reporting a terminal blocker.
 
 ## 15. Risks and Mitigations
 
-| Risk | Required mitigation |
-| --- | --- |
-| Gateway disables itself | Self-app deletion, scale-to-zero, last-web-dyno stop, and required-config removal blocks |
-| Secret disclosure | Explicit serializers, redaction, safe logs, request-field suppression, secret scans |
-| Unexpected cost | Billing switch, plan allowlist, approval evidence, no automatic paid provisioning |
-| Destructive retry | No automatic retries for destructive mutations |
-| Stale update | ETag/`If-Match` or expected-state checks |
-| API drift | Current Platform API schema revalidation and contract tests |
-| Builder operation limit | Canonical schema plus generated capability groups |
-| Upstream rate limit | Bounded pagination, quota metadata, no polling loops |
-| Multiple Context API dynos | Distributed rate-limit store required before horizontal scale |
-| MongoDB startup outage | Document current process coupling; do not falsely claim provider independence at process level |
-| Private Space entitlement | Feature switch, mocked tests, clear unavailable response |
-| Long-running builds/releases | `202` state modeling and caller-driven bounded status checks |
-| Log URL leakage | Server-side bounded fetch and URL suppression |
-| Certificate leakage | Write-only bounded input, no echo/log/persistence |
+| Risk                         | Required mitigation                                                                            |
+| ---------------------------- | ---------------------------------------------------------------------------------------------- |
+| Gateway disables itself      | Self-app deletion, scale-to-zero, last-web-dyno stop, and required-config removal blocks       |
+| Secret disclosure            | Explicit serializers, redaction, safe logs, request-field suppression, secret scans            |
+| Unexpected cost              | Billing switch, plan allowlist, approval evidence, no automatic paid provisioning              |
+| Destructive retry            | No automatic retries for destructive mutations                                                 |
+| Stale update                 | ETag/`If-Match` or expected-state checks                                                       |
+| API drift                    | Current Platform API schema revalidation and contract tests                                    |
+| Builder operation limit      | Canonical schema plus generated capability groups                                              |
+| Upstream rate limit          | Bounded pagination, quota metadata, no polling loops                                           |
+| Multiple Context API dynos   | Distributed rate-limit store required before horizontal scale                                  |
+| MongoDB startup outage       | Document current process coupling; do not falsely claim provider independence at process level |
+| Private Space entitlement    | Feature switch, mocked tests, clear unavailable response                                       |
+| Long-running builds/releases | `202` state modeling and caller-driven bounded status checks                                   |
+| Log URL leakage              | Server-side bounded fetch and URL suppression                                                  |
+| Certificate leakage          | Write-only bounded input, no echo/log/persistence                                              |
 
 ## 16. Completion Checklist
 

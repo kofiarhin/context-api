@@ -9,7 +9,11 @@ const MAP = {
   403: ['HEROKU_RESOURCE_FORBIDDEN', 403, 'The Heroku operation was denied.'],
   404: ['HEROKU_NOT_FOUND', 404, 'The requested Heroku resource was not found.'],
   409: ['HEROKU_CONFLICT', 409, 'The Heroku operation conflicts with current state.'],
-  412: ['HEROKU_PRECONDITION_FAILED', 412, 'The Heroku resource changed before this operation completed.'],
+  412: [
+    'HEROKU_PRECONDITION_FAILED',
+    412,
+    'The Heroku resource changed before this operation completed.',
+  ],
   422: ['HEROKU_INVALID_REQUEST', 422, 'Heroku rejected the request as invalid.'],
   429: ['HEROKU_RATE_LIMITED', 429, 'The Heroku API rate limit was reached.'],
 };

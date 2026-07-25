@@ -31,7 +31,12 @@ function parseProjects(markdown) {
   return markdown
     .split('\n')
     .filter((line) => line.startsWith('| [') && !line.includes('| ---'))
-    .map((line) => line.split('|').slice(1, -1).map((cell) => cell.trim()))
+    .map((line) =>
+      line
+        .split('|')
+        .slice(1, -1)
+        .map((cell) => cell.trim())
+    )
     .map(([projectCell, summary, repositoryUrl, liveUrl, notes]) => {
       const { name, projectFile } = parseCellLink(projectCell);
       const slug = slugify(name);

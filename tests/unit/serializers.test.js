@@ -61,7 +61,12 @@ describe('serializers', () => {
       name: 'Context API',
       lifecycleState: 'active',
       milestones: [
-        { key: 'm1', title: 'Foundation', status: 'complete', targetDate: new Date('2026-03-01T00:00:00.000Z') },
+        {
+          key: 'm1',
+          title: 'Foundation',
+          status: 'complete',
+          targetDate: new Date('2026-03-01T00:00:00.000Z'),
+        },
         { key: 'm2', title: 'Validation', status: 'open', targetDate: null },
       ],
     });
@@ -101,7 +106,14 @@ describe('serializers', () => {
 
   it('maps a collection through a serializer', () => {
     const output = serializers.serializeMany(serializers.serializeTask)([
-      { ...INTERNAL, taskId: 't1', title: 'One', projectId: 'p', status: 'ready', priority: 'high' },
+      {
+        ...INTERNAL,
+        taskId: 't1',
+        title: 'One',
+        projectId: 'p',
+        status: 'ready',
+        priority: 'high',
+      },
       { ...INTERNAL, taskId: 't2', title: 'Two', projectId: 'p', status: 'done', priority: 'low' },
     ]);
 

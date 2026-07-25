@@ -327,219 +327,219 @@ All routes below are required unless marked `conditional` or `prohibited`.
 
 ### 11.1 Account, regions, stacks, and rate limits
 
-| Method | Route | Operation ID | Classification |
-| --- | --- | --- | --- |
-| GET | `/account` | `getHerokuAccount` | read |
-| PATCH | `/account` | `updateHerokuAccount` | access-admin |
-| GET | `/account/rate-limits` | `getHerokuRateLimits` | read |
-| GET | `/regions` | `listHerokuRegions` | read |
-| GET | `/regions/:region` | `getHerokuRegion` | read |
-| GET | `/stacks` | `listHerokuStacks` | read |
-| GET | `/stacks/:stack` | `getHerokuStack` | read |
+| Method | Route                  | Operation ID          | Classification |
+| ------ | ---------------------- | --------------------- | -------------- |
+| GET    | `/account`             | `getHerokuAccount`    | read           |
+| PATCH  | `/account`             | `updateHerokuAccount` | access-admin   |
+| GET    | `/account/rate-limits` | `getHerokuRateLimits` | read           |
+| GET    | `/regions`             | `listHerokuRegions`   | read           |
+| GET    | `/regions/:region`     | `getHerokuRegion`     | read           |
+| GET    | `/stacks`              | `listHerokuStacks`    | read           |
+| GET    | `/stacks/:stack`       | `getHerokuStack`      | read           |
 
 Account updates must use an explicit field allowlist and must not expose or rotate credentials.
 
 ### 11.2 Apps
 
-| Method | Route | Operation ID | Classification |
-| --- | --- | --- | --- |
-| GET | `/apps` | `listHerokuApps` | read |
-| POST | `/apps` | `createHerokuApp` | billing-sensitive |
-| GET | `/apps/:app` | `getHerokuApp` | read |
-| PATCH | `/apps/:app` | `updateHerokuApp` | production-sensitive |
-| DELETE | `/apps/:app` | `deleteHerokuApp` | destructive |
-| POST | `/apps/:app/transfer` | `transferHerokuApp` | access-admin |
+| Method | Route                 | Operation ID        | Classification       |
+| ------ | --------------------- | ------------------- | -------------------- |
+| GET    | `/apps`               | `listHerokuApps`    | read                 |
+| POST   | `/apps`               | `createHerokuApp`   | billing-sensitive    |
+| GET    | `/apps/:app`          | `getHerokuApp`      | read                 |
+| PATCH  | `/apps/:app`          | `updateHerokuApp`   | production-sensitive |
+| DELETE | `/apps/:app`          | `deleteHerokuApp`   | destructive          |
+| POST   | `/apps/:app/transfer` | `transferHerokuApp` | access-admin         |
 
 App deletion and transfer are blocked for `HEROKU_SELF_APP`.
 
 ### 11.3 App features, buildpacks, and stack
 
-| Method | Route | Operation ID | Classification |
-| --- | --- | --- | --- |
-| GET | `/apps/:app/features` | `listHerokuAppFeatures` | read |
-| GET | `/apps/:app/features/:feature` | `getHerokuAppFeature` | read |
-| PATCH | `/apps/:app/features/:feature` | `updateHerokuAppFeature` | production-sensitive |
-| GET | `/apps/:app/buildpacks` | `listHerokuBuildpacks` | read |
-| POST | `/apps/:app/buildpacks` | `createHerokuBuildpack` | production-sensitive |
-| PATCH | `/apps/:app/buildpacks/:position` | `updateHerokuBuildpack` | production-sensitive |
-| DELETE | `/apps/:app/buildpacks/:position` | `deleteHerokuBuildpack` | destructive |
-| GET | `/apps/:app/stack` | `getHerokuAppStack` | read |
-| PATCH | `/apps/:app/stack` | `updateHerokuAppStack` | production-sensitive |
+| Method | Route                             | Operation ID             | Classification       |
+| ------ | --------------------------------- | ------------------------ | -------------------- |
+| GET    | `/apps/:app/features`             | `listHerokuAppFeatures`  | read                 |
+| GET    | `/apps/:app/features/:feature`    | `getHerokuAppFeature`    | read                 |
+| PATCH  | `/apps/:app/features/:feature`    | `updateHerokuAppFeature` | production-sensitive |
+| GET    | `/apps/:app/buildpacks`           | `listHerokuBuildpacks`   | read                 |
+| POST   | `/apps/:app/buildpacks`           | `createHerokuBuildpack`  | production-sensitive |
+| PATCH  | `/apps/:app/buildpacks/:position` | `updateHerokuBuildpack`  | production-sensitive |
+| DELETE | `/apps/:app/buildpacks/:position` | `deleteHerokuBuildpack`  | destructive          |
+| GET    | `/apps/:app/stack`                | `getHerokuAppStack`      | read                 |
+| PATCH  | `/apps/:app/stack`                | `updateHerokuAppStack`   | production-sensitive |
 
 ### 11.4 Config vars
 
-| Method | Route | Operation ID | Classification |
-| --- | --- | --- | --- |
-| GET | `/apps/:app/config-vars` | `listHerokuConfigVarMetadata` | read |
-| PATCH | `/apps/:app/config-vars` | `updateHerokuConfigVars` | production-sensitive |
-| DELETE | `/apps/:app/config-vars/:key` | `deleteHerokuConfigVar` | destructive |
+| Method | Route                         | Operation ID                  | Classification       |
+| ------ | ----------------------------- | ----------------------------- | -------------------- |
+| GET    | `/apps/:app/config-vars`      | `listHerokuConfigVarMetadata` | read                 |
+| PATCH  | `/apps/:app/config-vars`      | `updateHerokuConfigVars`      | production-sensitive |
+| DELETE | `/apps/:app/config-vars/:key` | `deleteHerokuConfigVar`       | destructive          |
 
 Read responses return key names, configured state, value classification, and optional non-secret safe values only. Raw values are prohibited. The implementation must maintain a sensitive-name detector and an explicit safe-value allowlist.
 
 ### 11.5 Dynos and formation
 
-| Method | Route | Operation ID | Classification |
-| --- | --- | --- | --- |
-| GET | `/apps/:app/dynos` | `listHerokuDynos` | read |
-| GET | `/apps/:app/dynos/:dyno` | `getHerokuDyno` | read |
-| DELETE | `/apps/:app/dynos/:dyno` | `stopHerokuDyno` | production-sensitive |
-| DELETE | `/apps/:app/dynos` | `restartAllHerokuDynos` | production-sensitive |
-| GET | `/apps/:app/formation` | `listHerokuFormation` | read |
-| GET | `/apps/:app/formation/:type` | `getHerokuFormation` | read |
-| PATCH | `/apps/:app/formation` | `batchUpdateHerokuFormation` | production-sensitive |
-| PATCH | `/apps/:app/formation/:type` | `updateHerokuFormation` | production-sensitive |
+| Method | Route                        | Operation ID                 | Classification       |
+| ------ | ---------------------------- | ---------------------------- | -------------------- |
+| GET    | `/apps/:app/dynos`           | `listHerokuDynos`            | read                 |
+| GET    | `/apps/:app/dynos/:dyno`     | `getHerokuDyno`              | read                 |
+| DELETE | `/apps/:app/dynos/:dyno`     | `stopHerokuDyno`             | production-sensitive |
+| DELETE | `/apps/:app/dynos`           | `restartAllHerokuDynos`      | production-sensitive |
+| GET    | `/apps/:app/formation`       | `listHerokuFormation`        | read                 |
+| GET    | `/apps/:app/formation/:type` | `getHerokuFormation`         | read                 |
+| PATCH  | `/apps/:app/formation`       | `batchUpdateHerokuFormation` | production-sensitive |
+| PATCH  | `/apps/:app/formation/:type` | `updateHerokuFormation`      | production-sensitive |
 
 Creating arbitrary one-off dynos is prohibited from the GPT Action. Scaling must enforce size allowlist, quantity maximum, expected current state, self-app minimum, and approval evidence.
 
 ### 11.6 Builds, sources, slugs, releases, and rollback
 
-| Method | Route | Operation ID | Classification |
-| --- | --- | --- | --- |
-| POST | `/sources` | `createHerokuSource` | normal-write |
-| GET | `/apps/:app/builds` | `listHerokuBuilds` | read |
-| POST | `/apps/:app/builds` | `createHerokuBuild` | production-sensitive |
-| GET | `/apps/:app/builds/:build` | `getHerokuBuild` | read |
-| GET | `/apps/:app/slugs` | `listHerokuSlugs` | read |
-| GET | `/apps/:app/slugs/:slug` | `getHerokuSlug` | read |
-| POST | `/apps/:app/slugs` | `createHerokuSlug` | production-sensitive |
-| GET | `/apps/:app/releases` | `listHerokuReleases` | read |
-| GET | `/apps/:app/releases/:release` | `getHerokuRelease` | read |
-| POST | `/apps/:app/releases` | `createHerokuRelease` | production-sensitive |
-| POST | `/apps/:app/releases/:release/rollback` | `rollbackHerokuRelease` | production-sensitive |
+| Method | Route                                   | Operation ID            | Classification       |
+| ------ | --------------------------------------- | ----------------------- | -------------------- |
+| POST   | `/sources`                              | `createHerokuSource`    | normal-write         |
+| GET    | `/apps/:app/builds`                     | `listHerokuBuilds`      | read                 |
+| POST   | `/apps/:app/builds`                     | `createHerokuBuild`     | production-sensitive |
+| GET    | `/apps/:app/builds/:build`              | `getHerokuBuild`        | read                 |
+| GET    | `/apps/:app/slugs`                      | `listHerokuSlugs`       | read                 |
+| GET    | `/apps/:app/slugs/:slug`                | `getHerokuSlug`         | read                 |
+| POST   | `/apps/:app/slugs`                      | `createHerokuSlug`      | production-sensitive |
+| GET    | `/apps/:app/releases`                   | `listHerokuReleases`    | read                 |
+| GET    | `/apps/:app/releases/:release`          | `getHerokuRelease`      | read                 |
+| POST   | `/apps/:app/releases`                   | `createHerokuRelease`   | production-sensitive |
+| POST   | `/apps/:app/releases/:release/rollback` | `rollbackHerokuRelease` | production-sensitive |
 
 Source upload/download URLs must be treated as short-lived sensitive URLs, returned only when required, never logged, and omitted from durable reports.
 
 ### 11.7 Logs
 
-| Method | Route | Operation ID | Classification |
-| --- | --- | --- | --- |
-| POST | `/apps/:app/log-sessions` | `createHerokuLogSession` | read |
-| POST | `/apps/:app/logs/query` | `queryHerokuLogs` | read |
+| Method | Route                     | Operation ID             | Classification |
+| ------ | ------------------------- | ------------------------ | -------------- |
+| POST   | `/apps/:app/log-sessions` | `createHerokuLogSession` | read           |
+| POST   | `/apps/:app/logs/query`   | `queryHerokuLogs`        | read           |
 
 `queryHerokuLogs` creates a non-tail log session and fetches bounded output server-side. It must enforce line, source, dyno, timeout, and response-size limits. Tail streaming is not exposed to the GPT Action.
 
 ### 11.8 Domains and SNI endpoints
 
-| Method | Route | Operation ID | Classification |
-| --- | --- | --- | --- |
-| GET | `/apps/:app/domains` | `listHerokuDomains` | read |
-| POST | `/apps/:app/domains` | `createHerokuDomain` | production-sensitive |
-| GET | `/apps/:app/domains/:domain` | `getHerokuDomain` | read |
-| PATCH | `/apps/:app/domains/:domain` | `updateHerokuDomain` | production-sensitive |
-| DELETE | `/apps/:app/domains/:domain` | `deleteHerokuDomain` | destructive |
-| GET | `/apps/:app/sni-endpoints` | `listHerokuSniEndpoints` | read |
-| GET | `/apps/:app/sni-endpoints/:endpoint` | `getHerokuSniEndpoint` | read |
-| POST | `/apps/:app/sni-endpoints` | `createHerokuSniEndpoint` | production-sensitive |
-| PATCH | `/apps/:app/sni-endpoints/:endpoint` | `updateHerokuSniEndpoint` | production-sensitive |
-| DELETE | `/apps/:app/sni-endpoints/:endpoint` | `deleteHerokuSniEndpoint` | destructive |
+| Method | Route                                | Operation ID              | Classification       |
+| ------ | ------------------------------------ | ------------------------- | -------------------- |
+| GET    | `/apps/:app/domains`                 | `listHerokuDomains`       | read                 |
+| POST   | `/apps/:app/domains`                 | `createHerokuDomain`      | production-sensitive |
+| GET    | `/apps/:app/domains/:domain`         | `getHerokuDomain`         | read                 |
+| PATCH  | `/apps/:app/domains/:domain`         | `updateHerokuDomain`      | production-sensitive |
+| DELETE | `/apps/:app/domains/:domain`         | `deleteHerokuDomain`      | destructive          |
+| GET    | `/apps/:app/sni-endpoints`           | `listHerokuSniEndpoints`  | read                 |
+| GET    | `/apps/:app/sni-endpoints/:endpoint` | `getHerokuSniEndpoint`    | read                 |
+| POST   | `/apps/:app/sni-endpoints`           | `createHerokuSniEndpoint` | production-sensitive |
+| PATCH  | `/apps/:app/sni-endpoints/:endpoint` | `updateHerokuSniEndpoint` | production-sensitive |
+| DELETE | `/apps/:app/sni-endpoints/:endpoint` | `deleteHerokuSniEndpoint` | destructive          |
 
 Certificate private keys are accepted only in request bodies, never echoed, logged, serialized, or persisted by Context API. Domain suffix allowlisting is mandatory.
 
 ### 11.9 Add-ons and attachments
 
-| Method | Route | Operation ID | Classification |
-| --- | --- | --- | --- |
-| GET | `/apps/:app/addons` | `listHerokuAddons` | read |
-| POST | `/apps/:app/addons` | `createHerokuAddon` | billing-sensitive |
-| GET | `/apps/:app/addons/:addon` | `getHerokuAddon` | read |
-| PATCH | `/apps/:app/addons/:addon` | `updateHerokuAddon` | billing-sensitive |
-| DELETE | `/apps/:app/addons/:addon` | `deleteHerokuAddon` | destructive |
-| GET | `/apps/:app/addon-attachments` | `listHerokuAddonAttachments` | read |
-| POST | `/apps/:app/addon-attachments` | `createHerokuAddonAttachment` | production-sensitive |
-| GET | `/apps/:app/addon-attachments/:attachment` | `getHerokuAddonAttachment` | read |
-| PATCH | `/apps/:app/addon-attachments/:attachment` | `updateHerokuAddonAttachment` | production-sensitive |
-| DELETE | `/apps/:app/addon-attachments/:attachment` | `deleteHerokuAddonAttachment` | destructive |
+| Method | Route                                      | Operation ID                  | Classification       |
+| ------ | ------------------------------------------ | ----------------------------- | -------------------- |
+| GET    | `/apps/:app/addons`                        | `listHerokuAddons`            | read                 |
+| POST   | `/apps/:app/addons`                        | `createHerokuAddon`           | billing-sensitive    |
+| GET    | `/apps/:app/addons/:addon`                 | `getHerokuAddon`              | read                 |
+| PATCH  | `/apps/:app/addons/:addon`                 | `updateHerokuAddon`           | billing-sensitive    |
+| DELETE | `/apps/:app/addons/:addon`                 | `deleteHerokuAddon`           | destructive          |
+| GET    | `/apps/:app/addon-attachments`             | `listHerokuAddonAttachments`  | read                 |
+| POST   | `/apps/:app/addon-attachments`             | `createHerokuAddonAttachment` | production-sensitive |
+| GET    | `/apps/:app/addon-attachments/:attachment` | `getHerokuAddonAttachment`    | read                 |
+| PATCH  | `/apps/:app/addon-attachments/:attachment` | `updateHerokuAddonAttachment` | production-sensitive |
+| DELETE | `/apps/:app/addon-attachments/:attachment` | `deleteHerokuAddonAttachment` | destructive          |
 
 Plans must match `HEROKU_ADDON_PLAN_ALLOWLIST`. Billing operations must fail closed unless explicitly enabled and approved.
 
 ### 11.10 Collaborators and app permissions
 
-| Method | Route | Operation ID | Classification |
-| --- | --- | --- | --- |
-| GET | `/apps/:app/collaborators` | `listHerokuCollaborators` | read |
-| POST | `/apps/:app/collaborators` | `createHerokuCollaborator` | access-admin |
-| GET | `/apps/:app/collaborators/:collaborator` | `getHerokuCollaborator` | read |
-| PATCH | `/apps/:app/collaborators/:collaborator` | `updateHerokuCollaborator` | access-admin |
-| DELETE | `/apps/:app/collaborators/:collaborator` | `deleteHerokuCollaborator` | access-admin |
+| Method | Route                                    | Operation ID               | Classification |
+| ------ | ---------------------------------------- | -------------------------- | -------------- |
+| GET    | `/apps/:app/collaborators`               | `listHerokuCollaborators`  | read           |
+| POST   | `/apps/:app/collaborators`               | `createHerokuCollaborator` | access-admin   |
+| GET    | `/apps/:app/collaborators/:collaborator` | `getHerokuCollaborator`    | read           |
+| PATCH  | `/apps/:app/collaborators/:collaborator` | `updateHerokuCollaborator` | access-admin   |
+| DELETE | `/apps/:app/collaborators/:collaborator` | `deleteHerokuCollaborator` | access-admin   |
 
 Access-admin operations must be disabled unless explicitly enabled and approved.
 
 ### 11.11 Pipelines and promotions
 
-| Method | Route | Operation ID | Classification |
-| --- | --- | --- | --- |
-| GET | `/pipelines` | `listHerokuPipelines` | read |
-| POST | `/pipelines` | `createHerokuPipeline` | normal-write |
-| GET | `/pipelines/:pipeline` | `getHerokuPipeline` | read |
-| PATCH | `/pipelines/:pipeline` | `updateHerokuPipeline` | production-sensitive |
-| DELETE | `/pipelines/:pipeline` | `deleteHerokuPipeline` | destructive |
-| GET | `/pipelines/:pipeline/apps` | `listHerokuPipelineApps` | read |
-| POST | `/pipelines/:pipeline/apps` | `createHerokuPipelineCoupling` | production-sensitive |
-| DELETE | `/pipelines/:pipeline/apps/:coupling` | `deleteHerokuPipelineCoupling` | destructive |
-| POST | `/pipelines/:pipeline/promotions` | `createHerokuPipelinePromotion` | production-sensitive |
-| GET | `/pipeline-promotions/:promotion` | `getHerokuPipelinePromotion` | read |
-| GET | `/pipeline-promotions/:promotion/targets` | `listHerokuPipelinePromotionTargets` | read |
+| Method | Route                                     | Operation ID                         | Classification       |
+| ------ | ----------------------------------------- | ------------------------------------ | -------------------- |
+| GET    | `/pipelines`                              | `listHerokuPipelines`                | read                 |
+| POST   | `/pipelines`                              | `createHerokuPipeline`               | normal-write         |
+| GET    | `/pipelines/:pipeline`                    | `getHerokuPipeline`                  | read                 |
+| PATCH  | `/pipelines/:pipeline`                    | `updateHerokuPipeline`               | production-sensitive |
+| DELETE | `/pipelines/:pipeline`                    | `deleteHerokuPipeline`               | destructive          |
+| GET    | `/pipelines/:pipeline/apps`               | `listHerokuPipelineApps`             | read                 |
+| POST   | `/pipelines/:pipeline/apps`               | `createHerokuPipelineCoupling`       | production-sensitive |
+| DELETE | `/pipelines/:pipeline/apps/:coupling`     | `deleteHerokuPipelineCoupling`       | destructive          |
+| POST   | `/pipelines/:pipeline/promotions`         | `createHerokuPipelinePromotion`      | production-sensitive |
+| GET    | `/pipeline-promotions/:promotion`         | `getHerokuPipelinePromotion`         | read                 |
+| GET    | `/pipeline-promotions/:promotion/targets` | `listHerokuPipelinePromotionTargets` | read                 |
 
 Production promotion requires expected source release and target app evidence.
 
 ### 11.12 Pipeline config vars
 
-| Method | Route | Operation ID | Classification |
-| --- | --- | --- | --- |
-| GET | `/pipelines/:pipeline/stages/:stage/config-vars` | `listHerokuPipelineConfigVarMetadata` | read |
-| PATCH | `/pipelines/:pipeline/stages/:stage/config-vars` | `updateHerokuPipelineConfigVars` | production-sensitive |
+| Method | Route                                            | Operation ID                          | Classification       |
+| ------ | ------------------------------------------------ | ------------------------------------- | -------------------- |
+| GET    | `/pipelines/:pipeline/stages/:stage/config-vars` | `listHerokuPipelineConfigVarMetadata` | read                 |
+| PATCH  | `/pipelines/:pipeline/stages/:stage/config-vars` | `updateHerokuPipelineConfigVars`      | production-sensitive |
 
 The same config-var redaction and self-protection rules apply.
 
 ### 11.13 Review apps
 
-| Method | Route | Operation ID | Classification |
-| --- | --- | --- | --- |
-| GET | `/pipelines/:pipeline/review-apps` | `listHerokuReviewApps` | read |
-| POST | `/pipelines/:pipeline/review-apps` | `createHerokuReviewApp` | billing-sensitive |
-| GET | `/review-apps/:reviewApp` | `getHerokuReviewApp` | read |
-| DELETE | `/review-apps/:reviewApp` | `deleteHerokuReviewApp` | destructive |
-| GET | `/pipelines/:pipeline/review-app-config` | `getHerokuReviewAppConfig` | read |
-| PATCH | `/pipelines/:pipeline/review-app-config` | `updateHerokuReviewAppConfig` | production-sensitive |
+| Method | Route                                    | Operation ID                  | Classification       |
+| ------ | ---------------------------------------- | ----------------------------- | -------------------- |
+| GET    | `/pipelines/:pipeline/review-apps`       | `listHerokuReviewApps`        | read                 |
+| POST   | `/pipelines/:pipeline/review-apps`       | `createHerokuReviewApp`       | billing-sensitive    |
+| GET    | `/review-apps/:reviewApp`                | `getHerokuReviewApp`          | read                 |
+| DELETE | `/review-apps/:reviewApp`                | `deleteHerokuReviewApp`       | destructive          |
+| GET    | `/pipelines/:pipeline/review-app-config` | `getHerokuReviewAppConfig`    | read                 |
+| PATCH  | `/pipelines/:pipeline/review-app-config` | `updateHerokuReviewAppConfig` | production-sensitive |
 
 Review-app creation must be bounded to approved pipelines and repositories and include cleanup expectations.
 
 ### 11.14 App and pipeline webhooks
 
-| Method | Route | Operation ID | Classification |
-| --- | --- | --- | --- |
-| GET | `/apps/:app/webhooks` | `listHerokuAppWebhooks` | read |
-| POST | `/apps/:app/webhooks` | `createHerokuAppWebhook` | production-sensitive |
-| GET | `/apps/:app/webhooks/:webhook` | `getHerokuAppWebhook` | read |
-| DELETE | `/apps/:app/webhooks/:webhook` | `deleteHerokuAppWebhook` | destructive |
-| GET | `/apps/:app/webhook-deliveries` | `listHerokuAppWebhookDeliveries` | read |
-| GET | `/apps/:app/webhook-deliveries/:delivery` | `getHerokuAppWebhookDelivery` | read |
-| GET | `/pipelines/:pipeline/webhooks` | `listHerokuPipelineWebhooks` | read |
-| POST | `/pipelines/:pipeline/webhooks` | `createHerokuPipelineWebhook` | production-sensitive |
-| DELETE | `/pipelines/:pipeline/webhooks/:webhook` | `deleteHerokuPipelineWebhook` | destructive |
+| Method | Route                                     | Operation ID                     | Classification       |
+| ------ | ----------------------------------------- | -------------------------------- | -------------------- |
+| GET    | `/apps/:app/webhooks`                     | `listHerokuAppWebhooks`          | read                 |
+| POST   | `/apps/:app/webhooks`                     | `createHerokuAppWebhook`         | production-sensitive |
+| GET    | `/apps/:app/webhooks/:webhook`            | `getHerokuAppWebhook`            | read                 |
+| DELETE | `/apps/:app/webhooks/:webhook`            | `deleteHerokuAppWebhook`         | destructive          |
+| GET    | `/apps/:app/webhook-deliveries`           | `listHerokuAppWebhookDeliveries` | read                 |
+| GET    | `/apps/:app/webhook-deliveries/:delivery` | `getHerokuAppWebhookDelivery`    | read                 |
+| GET    | `/pipelines/:pipeline/webhooks`           | `listHerokuPipelineWebhooks`     | read                 |
+| POST   | `/pipelines/:pipeline/webhooks`           | `createHerokuPipelineWebhook`    | production-sensitive |
+| DELETE | `/pipelines/:pipeline/webhooks/:webhook`  | `deleteHerokuPipelineWebhook`    | destructive          |
 
 Webhook secrets are write-only and never returned. Callback URLs must use HTTPS and pass configured host policy.
 
 ### 11.15 Teams
 
-| Method | Route | Operation ID | Classification |
-| --- | --- | --- | --- |
-| GET | `/teams` | `listHerokuTeams` | read |
-| POST | `/teams` | `createHerokuTeam` | billing-sensitive |
-| GET | `/teams/:team` | `getHerokuTeam` | read |
-| PATCH | `/teams/:team` | `updateHerokuTeam` | access-admin |
-| DELETE | `/teams/:team` | `deleteHerokuTeam` | destructive |
-| GET | `/teams/:team/apps` | `listHerokuTeamApps` | read |
-| GET | `/teams/:team/members` | `listHerokuTeamMembers` | read |
-| POST | `/teams/:team/members` | `createHerokuTeamMember` | access-admin |
-| PATCH | `/teams/:team/members/:member` | `updateHerokuTeamMember` | access-admin |
-| DELETE | `/teams/:team/members/:member` | `deleteHerokuTeamMember` | access-admin |
-| GET | `/teams/:team/invitations` | `listHerokuTeamInvitations` | read |
-| POST | `/teams/:team/invitations` | `createHerokuTeamInvitation` | access-admin |
-| DELETE | `/teams/:team/invitations/:invitation` | `deleteHerokuTeamInvitation` | access-admin |
-| GET | `/teams/:team/usage/daily` | `getHerokuTeamDailyUsage` | read |
-| GET | `/teams/:team/usage/monthly` | `getHerokuTeamMonthlyUsage` | read |
-| GET | `/teams/:team/invoices` | `listHerokuTeamInvoices` | read |
+| Method | Route                                  | Operation ID                 | Classification    |
+| ------ | -------------------------------------- | ---------------------------- | ----------------- |
+| GET    | `/teams`                               | `listHerokuTeams`            | read              |
+| POST   | `/teams`                               | `createHerokuTeam`           | billing-sensitive |
+| GET    | `/teams/:team`                         | `getHerokuTeam`              | read              |
+| PATCH  | `/teams/:team`                         | `updateHerokuTeam`           | access-admin      |
+| DELETE | `/teams/:team`                         | `deleteHerokuTeam`           | destructive       |
+| GET    | `/teams/:team/apps`                    | `listHerokuTeamApps`         | read              |
+| GET    | `/teams/:team/members`                 | `listHerokuTeamMembers`      | read              |
+| POST   | `/teams/:team/members`                 | `createHerokuTeamMember`     | access-admin      |
+| PATCH  | `/teams/:team/members/:member`         | `updateHerokuTeamMember`     | access-admin      |
+| DELETE | `/teams/:team/members/:member`         | `deleteHerokuTeamMember`     | access-admin      |
+| GET    | `/teams/:team/invitations`             | `listHerokuTeamInvitations`  | read              |
+| POST   | `/teams/:team/invitations`             | `createHerokuTeamInvitation` | access-admin      |
+| DELETE | `/teams/:team/invitations/:invitation` | `deleteHerokuTeamInvitation` | access-admin      |
+| GET    | `/teams/:team/usage/daily`             | `getHerokuTeamDailyUsage`    | read              |
+| GET    | `/teams/:team/usage/monthly`           | `getHerokuTeamMonthlyUsage`  | read              |
+| GET    | `/teams/:team/invoices`                | `listHerokuTeamInvoices`     | read              |
 
 Invoice responses must exclude payment-method details and other unnecessary sensitive information.
 
@@ -547,23 +547,23 @@ Invoice responses must exclude payment-method details and other unnecessary sens
 
 These routes are required when the token/account has the entitlement and `HEROKU_PRIVATE_SPACE_OPERATIONS_ENABLED=true`. Otherwise they must return a clear feature-disabled or entitlement error.
 
-| Method | Route | Operation ID | Classification |
-| --- | --- | --- | --- |
-| GET | `/spaces` | `listHerokuSpaces` | read |
-| POST | `/spaces` | `createHerokuSpace` | private-space-admin |
-| GET | `/spaces/:space` | `getHerokuSpace` | read |
-| PATCH | `/spaces/:space` | `updateHerokuSpace` | private-space-admin |
-| DELETE | `/spaces/:space` | `deleteHerokuSpace` | destructive |
-| GET | `/spaces/:space/apps` | `listHerokuSpaceApps` | read |
-| GET | `/spaces/:space/access` | `listHerokuSpaceAccess` | read |
-| POST | `/spaces/:space/access` | `createHerokuSpaceAccess` | private-space-admin |
-| DELETE | `/spaces/:space/access/:member` | `deleteHerokuSpaceAccess` | private-space-admin |
-| GET | `/spaces/:space/topology` | `getHerokuSpaceTopology` | read |
-| GET | `/spaces/:space/nat` | `getHerokuSpaceNat` | read |
-| GET | `/spaces/:space/vpn-connections` | `listHerokuSpaceVpnConnections` | read |
-| POST | `/spaces/:space/vpn-connections` | `createHerokuSpaceVpnConnection` | private-space-admin |
-| GET | `/spaces/:space/vpn-connections/:vpn` | `getHerokuSpaceVpnConnection` | read |
-| DELETE | `/spaces/:space/vpn-connections/:vpn` | `deleteHerokuSpaceVpnConnection` | destructive |
+| Method | Route                                 | Operation ID                     | Classification      |
+| ------ | ------------------------------------- | -------------------------------- | ------------------- |
+| GET    | `/spaces`                             | `listHerokuSpaces`               | read                |
+| POST   | `/spaces`                             | `createHerokuSpace`              | private-space-admin |
+| GET    | `/spaces/:space`                      | `getHerokuSpace`                 | read                |
+| PATCH  | `/spaces/:space`                      | `updateHerokuSpace`              | private-space-admin |
+| DELETE | `/spaces/:space`                      | `deleteHerokuSpace`              | destructive         |
+| GET    | `/spaces/:space/apps`                 | `listHerokuSpaceApps`            | read                |
+| GET    | `/spaces/:space/access`               | `listHerokuSpaceAccess`          | read                |
+| POST   | `/spaces/:space/access`               | `createHerokuSpaceAccess`        | private-space-admin |
+| DELETE | `/spaces/:space/access/:member`       | `deleteHerokuSpaceAccess`        | private-space-admin |
+| GET    | `/spaces/:space/topology`             | `getHerokuSpaceTopology`         | read                |
+| GET    | `/spaces/:space/nat`                  | `getHerokuSpaceNat`              | read                |
+| GET    | `/spaces/:space/vpn-connections`      | `listHerokuSpaceVpnConnections`  | read                |
+| POST   | `/spaces/:space/vpn-connections`      | `createHerokuSpaceVpnConnection` | private-space-admin |
+| GET    | `/spaces/:space/vpn-connections/:vpn` | `getHerokuSpaceVpnConnection`    | read                |
+| DELETE | `/spaces/:space/vpn-connections/:vpn` | `deleteHerokuSpaceVpnConnection` | destructive         |
 
 Exact upstream resource availability and paths must be revalidated against the current Platform API schema during implementation.
 
@@ -621,20 +621,20 @@ Safe config metadata example:
 
 Normalize at least:
 
-| Upstream condition | Context API code | Status |
-| --- | --- | --- |
-| Missing/invalid Zoro key | `AUTHENTICATION_REQUIRED` | 401 |
-| Invalid/expired Heroku token | `HEROKU_UNAUTHORIZED` | 502 or 401 by documented policy |
-| Policy/allowlist denial | `HEROKU_RESOURCE_FORBIDDEN` | 403 |
-| Billing verification needed | `HEROKU_PAYMENT_REQUIRED` | 402 |
-| Resource missing | `HEROKU_NOT_FOUND` | 404 |
-| State conflict | `HEROKU_CONFLICT` | 409 |
-| Stale ETag | `HEROKU_PRECONDITION_FAILED` | 412 |
-| Invalid upstream parameters | `HEROKU_INVALID_REQUEST` | 422 |
-| Upstream rate limit | `HEROKU_RATE_LIMITED` | 429 |
-| Gateway timeout | `HEROKU_TIMEOUT` | 504 |
-| Heroku unavailable | `HEROKU_UNAVAILABLE` | 502/503 |
-| Feature/entitlement unavailable | `HEROKU_FEATURE_UNAVAILABLE` | 403/501 |
+| Upstream condition              | Context API code             | Status                          |
+| ------------------------------- | ---------------------------- | ------------------------------- |
+| Missing/invalid Zoro key        | `AUTHENTICATION_REQUIRED`    | 401                             |
+| Invalid/expired Heroku token    | `HEROKU_UNAUTHORIZED`        | 502 or 401 by documented policy |
+| Policy/allowlist denial         | `HEROKU_RESOURCE_FORBIDDEN`  | 403                             |
+| Billing verification needed     | `HEROKU_PAYMENT_REQUIRED`    | 402                             |
+| Resource missing                | `HEROKU_NOT_FOUND`           | 404                             |
+| State conflict                  | `HEROKU_CONFLICT`            | 409                             |
+| Stale ETag                      | `HEROKU_PRECONDITION_FAILED` | 412                             |
+| Invalid upstream parameters     | `HEROKU_INVALID_REQUEST`     | 422                             |
+| Upstream rate limit             | `HEROKU_RATE_LIMITED`        | 429                             |
+| Gateway timeout                 | `HEROKU_TIMEOUT`             | 504                             |
+| Heroku unavailable              | `HEROKU_UNAVAILABLE`         | 502/503                         |
+| Feature/entitlement unavailable | `HEROKU_FEATURE_UNAVAILABLE` | 403/501                         |
 
 Do not pass through HTML or unsanitized text from upstream errors.
 
