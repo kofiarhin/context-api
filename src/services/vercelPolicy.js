@@ -1,6 +1,7 @@
 'use strict';
 
 const { getVercelConfig } = require('../config/vercel');
+const { getZoroEngineeringConfig } = require('../config/zoroEngineering');
 const { ValidationError, VercelForbiddenError } = require('../utils/errors');
 
 function normalizeList(values = []) {
@@ -32,7 +33,6 @@ function requireDestructiveConfirmation(env, confirmation, expected) {
   if (!env.vercelAllowDestructiveOperations) {
     throw new VercelForbiddenError('Destructive Vercel operations are disabled.');
   }
-
   if (
     !confirmation ||
     confirmation.confirmed !== true ||
@@ -43,7 +43,6 @@ function requireDestructiveConfirmation(env, confirmation, expected) {
   ) {
     throw new VercelForbiddenError('Exact destructive-operation confirmation is required.');
   }
-
   if (expected.expectedName && confirmation.expectedName !== expected.expectedName) {
     throw new VercelForbiddenError('The destructive confirmation does not match resource state.');
   }
@@ -56,7 +55,9 @@ function assertEnvironmentValueInput(input) {
 }
 
 function createPolicy(baseEnv = {}, options = {}) {
-  const env = getVercelConfig(baseEnv, options.source || process.env);
+  const source = options.source || process.env;
+  const env = getVercelConfig(baseEnv, source);
+  const zoro = getZoroEngineeringConfig(source);
   const projectAllowlist = normalizeList(env.vercelProjectAllowlist);
   const domainAllowlist = normalizeList(env.vercelDomainAllowlist);
   const repositoryAllowlist = normalizeList(env.vercelRepositoryAllowlist);
@@ -71,7 +72,10 @@ function createPolicy(baseEnv = {}, options = {}) {
     assertRepositoryAllowed(repository) {
       assertAllowed(repository, repositoryAllowlist, 'Repository');
     },
-    requireProductionApproval,
+    requireProductionApproval(approval, resource) {
+      if (zoro.fullOperatorMode) return;
+      requireProductionApproval(approval, resource);
+    },
     requireDestructiveConfirmation(confirmation, expected) {
       requireDestructiveConfirmation(env, confirmation, expected);
     },
