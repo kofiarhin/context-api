@@ -114,10 +114,18 @@ function sendPagedCollection(res, data, meta, statusCode = 200) {
   });
 }
 
-function sendResource(res, data, statusCode = 200) {
+/**
+ * Emits a single resource.
+ *
+ * `meta` is optional and defaults to empty, so every existing caller keeps the
+ * bare `{ version }` envelope. The unified Zoro dispatcher uses it to echo which
+ * dispatcher, operation, and classification produced the resource — information
+ * that would otherwise only survive on collection responses.
+ */
+function sendResource(res, data, statusCode = 200, meta = {}) {
   return sendJson(res, statusCode, {
     data,
-    meta: { version: API_VERSION },
+    meta: { ...meta, version: API_VERSION },
   });
 }
 

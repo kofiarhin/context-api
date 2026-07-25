@@ -5,7 +5,10 @@ const { getHerokuConfig } = require('../../config/heroku');
 
 const SENSITIVE_KEYS = /(token|secret|password|private[_-]?key|database_url|mongodb|redis|credential|certificate|api[_-]?key|uri|url)/i;
 const SAFE_CONFIG_KEYS = new Set(['NODE_ENV', 'LOG_LEVEL']);
-const REQUIRED_SELF_KEYS = new Set(['HEROKU_API_TOKEN', 'ZORO_HEROKU_API_KEY', 'MONGODB_URI', 'PORT']);
+// Context API self-protection. ZORO_ENGINEERING_API_KEY joins this set because the
+// unified engineering dispatcher can reach Heroku config vars: without the guard an
+// agent could delete the very key that authenticates it.
+const REQUIRED_SELF_KEYS = new Set(['HEROKU_API_TOKEN', 'ZORO_HEROKU_API_KEY', 'ZORO_ENGINEERING_API_KEY', 'MONGODB_URI', 'PORT']);
 
 function denied(message) {
   return new AppError('HEROKU_RESOURCE_FORBIDDEN', message, 403);
