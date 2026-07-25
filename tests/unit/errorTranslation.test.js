@@ -3,6 +3,7 @@
 const { translate } = require('../../src/middleware/errorHandler');
 const {
   ValidationError,
+  PayloadTooLargeError,
   ResourceNotFoundError,
   DatabaseUnavailableError,
   InternalServerError,
@@ -78,11 +79,18 @@ describe('error translation', () => {
     expect(translated.details[0].field).toBe('body');
   });
 
-  it('maps an oversized body to a validation error', () => {
+  it('maps an oversized body to a payload-too-large error', () => {
     const error = new Error('too large');
     error.type = 'entity.too.large';
 
-    expect(translate(error)).toBeInstanceOf(ValidationError);
+    const translated = translate(error);
+
+    expect(translated).toBeInstanceOf(PayloadTooLargeError);
+    expect(translated.statusCode).toBe(413);
+    expect(translated.code).toBe('PAYLOAD_TOO_LARGE');
+    expect(translated.details).toEqual([
+      { field: 'body', message: 'Request body exceeds the configured size limit.' },
+    ]);
   });
 
   it('falls back to a generic internal error for anything unrecognized', () => {

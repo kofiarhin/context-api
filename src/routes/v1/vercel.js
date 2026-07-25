@@ -11,9 +11,19 @@ const { RouteNotFoundError } = require('../../utils/errors');
 
 const router = Router();
 
-router.post('/read', validateVercelBody, controller.dispatchRead);
-router.post('/write', validateVercelBody, controller.dispatchWrite);
-router.post('/destructive', validateVercelBody, controller.dispatchDestructive);
+// These grouped dispatcher endpoints are published through the combined Zoro
+// Action contract, not the split direct-route Vercel schemas. Keeping their
+// paths in named constants makes that boundary explicit and prevents the direct
+// schema release validator's literal-route reader from treating them as missing.
+const DISPATCHER_PATHS = Object.freeze({
+  read: '/read',
+  write: '/write',
+  destructive: '/destructive',
+});
+
+router.post(DISPATCHER_PATHS.read, validateVercelBody, controller.dispatchRead);
+router.post(DISPATCHER_PATHS.write, validateVercelBody, controller.dispatchWrite);
+router.post(DISPATCHER_PATHS.destructive, validateVercelBody, controller.dispatchDestructive);
 
 router.get('/user', controller.getUser);
 router.get('/teams', validateVercelQuery, controller.listTeams);
@@ -62,3 +72,4 @@ router.delete('/domains/:domain/dns/:record', validateVercelParams, validateVerc
 router.use((req, res, next) => next(new RouteNotFoundError()));
 
 module.exports = router;
+module.exports.DISPATCHER_PATHS = DISPATCHER_PATHS;

@@ -5,6 +5,7 @@ const { PUBLISHED_STATUSES } = require('../utils/enums');
 const { paginate } = require('./queryHelpers');
 
 const SORT = { updatedAt: -1, key: 1, version: -1 };
+const INSPECTABLE_FALLBACK_STATUSES = ['superseded', 'archived'];
 
 function buildFilter(filters = {}) {
   const filter = {};
@@ -29,8 +30,9 @@ async function listInstructionSets(filters, pagination) {
 }
 
 /**
- * Prefers the highest published version, then falls back to the latest stored
- * version so an archived record remains directly inspectable and restorable.
+ * Prefers the highest published version. When no published version exists, an
+ * explicitly retired version may still be inspected, but draft-only instruction
+ * sets remain unpublished and therefore invisible through the detail endpoint.
  */
 async function getInstructionSetByKey(key) {
   const published = await InstructionSet.findOne({
@@ -44,7 +46,12 @@ async function getInstructionSetByKey(key) {
     return published;
   }
 
-  return InstructionSet.findOne({ key }).sort({ version: -1, updatedAt: -1 }).lean();
+  return InstructionSet.findOne({
+    key,
+    status: { $in: INSPECTABLE_FALLBACK_STATUSES },
+  })
+    .sort({ version: -1, updatedAt: -1 })
+    .lean();
 }
 
 module.exports = {
@@ -52,4 +59,5 @@ module.exports = {
   getInstructionSetByKey,
   buildFilter,
   SORT,
+  INSPECTABLE_FALLBACK_STATUSES,
 };

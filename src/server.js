@@ -1,5 +1,7 @@
 'use strict';
 
+require('./config/loadDotenv').loadDotenv();
+
 const createApp = require('./app');
 const { getEnv } = require('./config/env');
 const { getHerokuConfig } = require('./config/heroku');

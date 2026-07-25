@@ -17,6 +17,11 @@ class ValidationError extends AppError {
     super('VALIDATION_ERROR', message, 400, details);
   }
 }
+class PayloadTooLargeError extends AppError {
+  constructor(message = 'Request body exceeds the configured size limit.', details = []) {
+    super('PAYLOAD_TOO_LARGE', message, 413, details);
+  }
+}
 class ResourceNotFoundError extends AppError {
   constructor(message = 'The requested resource was not found.', details = []) {
     super('RESOURCE_NOT_FOUND', message, 404, details);
@@ -116,6 +121,7 @@ class VercelUnavailableError extends AppError {
 module.exports = {
   AppError,
   ValidationError,
+  PayloadTooLargeError,
   ResourceNotFoundError,
   RouteNotFoundError,
   MethodNotAllowedError,

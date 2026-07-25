@@ -55,9 +55,12 @@ describe('GitHub route body limit', () => {
       .set('Authorization', authHeader())
       .send(fileBody('a'.repeat(600000)));
 
-    expect(response.status).toBe(400);
-    expect(response.body.error.code).toBe('VALIDATION_ERROR');
-    expect(response.body.error.details[0].message).toMatch(/size limit/i);
+    expect(response.status).toBe(413);
+    expect(response.body.error.code).toBe('PAYLOAD_TOO_LARGE');
+    expect(response.body.error.details[0]).toMatchObject({
+      field: 'body',
+      message: expect.stringMatching(/size limit/i),
+    });
     expect(githubService.createFile).not.toHaveBeenCalled();
   });
 
@@ -79,8 +82,12 @@ describe('context route body limit', () => {
       .post('/api/v1/projects')
       .send({ projectId: 'big', description: 'a'.repeat(20000) });
 
-    expect(response.status).toBe(400);
-    expect(response.body.error.details[0].message).toMatch(/size limit/i);
+    expect(response.status).toBe(413);
+    expect(response.body.error.code).toBe('PAYLOAD_TOO_LARGE');
+    expect(response.body.error.details[0]).toMatchObject({
+      field: 'body',
+      message: expect.stringMatching(/size limit/i),
+    });
   });
 
   it('does not inherit the larger GitHub limit', async () => {
@@ -88,6 +95,7 @@ describe('context route body limit', () => {
       .post('/api/v1/projects')
       .send({ projectId: 'big', description: 'a'.repeat(120000) });
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(413);
+    expect(response.body.error.code).toBe('PAYLOAD_TOO_LARGE');
   });
 });

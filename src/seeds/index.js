@@ -1,5 +1,7 @@
 'use strict';
 
+require('../config/loadDotenv').loadDotenv();
+
 const { getEnv } = require('../config/env');
 const { connect, disconnect } = require('../config/database');
 const { seedAll, resetAll, summarize } = require('./runner');
