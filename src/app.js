@@ -8,6 +8,7 @@ const { getHealth } = require('./controllers/health.controller');
 const v1Router = require('./routes/v1');
 const githubRouter = require('./routes/v1/github');
 const vercelRouter = require('./routes/v1/vercel');
+const herokuRouter = require('./routes/v1/heroku');
 
 const correlationId = require('./middleware/correlationId');
 const requestLogger = require('./middleware/requestLogger');
@@ -17,6 +18,7 @@ const requireDatabase = require('./middleware/requireDatabase');
 const requireGithubActionAuth = require('./middleware/requireGithubActionAuth');
 const requireGithubRepositoryAccess = require('./middleware/requireGithubRepositoryAccess');
 const requireVercelActionAuth = require('./middleware/requireVercelActionAuth');
+const requireHerokuActionAuth = require('./middleware/requireHerokuActionAuth');
 const notFound = require('./middleware/notFound');
 const errorHandler = require('./middleware/errorHandler');
 const { createCors, createRateLimiter } = require('./middleware/security');
@@ -24,6 +26,7 @@ const { createCors, createRateLimiter } = require('./middleware/security');
 const JSON_BODY_LIMIT = '10kb';
 const GITHUB_JSON_BODY_LIMIT = '512kb';
 const VERCEL_JSON_BODY_LIMIT = '64kb';
+const HEROKU_JSON_BODY_LIMIT = '256kb';
 
 function createApp(options = {}) {
   const env = options.env || getEnv();
@@ -49,8 +52,6 @@ function createApp(options = {}) {
     githubRouter
   );
 
-  // Vercel operations use an independent bearer key and deliberately bypass
-  // request-time MongoDB availability. Provider credentials remain server-side.
   app.use(
     '/api/v1/vercel',
     express.json({ limit: VERCEL_JSON_BODY_LIMIT }),
@@ -58,8 +59,14 @@ function createApp(options = {}) {
     vercelRouter
   );
 
-  app.use('/api/v1', express.json({ limit: JSON_BODY_LIMIT }), requireDatabase, v1Router);
+  app.use(
+    '/api/v1/heroku',
+    express.json({ limit: HEROKU_JSON_BODY_LIMIT }),
+    requireHerokuActionAuth(env, { source: options.herokuEnvSource }),
+    herokuRouter
+  );
 
+  app.use('/api/v1', express.json({ limit: JSON_BODY_LIMIT }), requireDatabase, v1Router);
   app.use(notFound);
   app.use(errorHandler);
 
@@ -70,3 +77,4 @@ module.exports = createApp;
 module.exports.JSON_BODY_LIMIT = JSON_BODY_LIMIT;
 module.exports.GITHUB_JSON_BODY_LIMIT = GITHUB_JSON_BODY_LIMIT;
 module.exports.VERCEL_JSON_BODY_LIMIT = VERCEL_JSON_BODY_LIMIT;
+module.exports.HEROKU_JSON_BODY_LIMIT = HEROKU_JSON_BODY_LIMIT;
