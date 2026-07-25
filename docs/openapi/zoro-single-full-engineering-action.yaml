@@ -1,0 +1,406 @@
+openapi: 3.1.0
+
+# The unified Zoro engineering Action.
+#
+# This schema publishes exactly ONE operationId. GPT Builder caps an Action at 30
+# operations, and the Context API's combined GitHub, Vercel, Heroku, context, and
+# operations-log surface is far larger than that. Collapsing everything behind a
+# single dispatcher keeps the whole engineering surface reachable from one Action
+# without splitting it across several schemas.
+#
+# The dispatcher is NOT a generic proxy. `operationId` selects one of fifteen
+# server-side catalogue entries; it never names an upstream URL, HTTP method, or
+# path. Provider credentials (GitHub App key, Vercel token, Heroku API token)
+# remain server-side and are never accepted, returned, or substituted here.
+
+info:
+  title: Zoro Unified Engineering Action
+  version: 1.0.0
+  description: >-
+    One executable entry point for Kofi's engineering control plane: Context API
+    records, the context resolver, GitHub repositories and pull requests, Vercel
+    projects and deployments, Heroku applications, and an append-only DevOps
+    operations log.
+
+
+    Call POST /api/v1/zoro/operations/{operationId} with a dispatcher id in the
+    path and an operation name in the body. Authenticate with the
+    ZORO_ENGINEERING_API_KEY bearer key.
+
+
+    Approval and confirmation rules are enforced server-side and cannot be
+    bypassed. Merge, production-sensitive, security-sensitive, billing,
+    access-admin, and destructive operations require explicit Kofi approval
+    evidence. Destructive operations additionally require an exact confirmation
+    naming the resource being destroyed. Branch moves, file updates and deletes,
+    and merges require the expected SHA, ETag, or release so a concurrent change
+    is never silently overwritten.
+
+servers:
+  - url: https://context-api-3b9dfadf403e.herokuapp.com
+    description: Production
+
+security:
+  - ZoroEngineeringBearer: []
+
+tags:
+  - name: engineering
+
+paths:
+  /api/v1/zoro/operations/{operationId}:
+    post:
+      tags: [engineering]
+      operationId: executeZoroEngineeringOperation
+      summary: Execute one allowlisted engineering operation
+      description: >-
+        Route a single engineering operation to the Context, GitHub, Vercel,
+        Heroku, or operations-log subsystem.
+
+
+        operationId (path) selects the dispatcher. operation (body) selects the
+        specific action within it. parameters carries the operation's inputs,
+        pagination carries list controls, approval carries Kofi's authorisation,
+        and confirmation carries the exact destructive acknowledgement.
+
+
+        health.check and context.resolve accept an omitted operation and default
+        to their single action.
+      security:
+        - ZoroEngineeringBearer: []
+      parameters:
+        - name: operationId
+          in: path
+          required: true
+          description: >-
+            The dispatcher to invoke. Read: health.check, context.resolve,
+            engineering.read, github.read, vercel.read, opslog.read. Write:
+            engineering.write, github.write, github.review, vercel.write,
+            heroku.execute, opslog.write. Destructive: engineering.archive,
+            github.destructive, vercel.destructive.
+          schema:
+            type: string
+            enum:
+              - health.check
+              - context.resolve
+              - engineering.read
+              - engineering.write
+              - engineering.archive
+              - github.read
+              - github.write
+              - github.review
+              - github.destructive
+              - vercel.read
+              - vercel.write
+              - vercel.destructive
+              - heroku.execute
+              - opslog.read
+              - opslog.write
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperationRequest'
+      responses:
+        '200':
+          description: The operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationResponse'
+        '201':
+          description: The operation created a resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationResponse'
+        '400':
+          description: >-
+            Validation failed, the operation is not allowed by the named
+            dispatcher, or a required expected SHA, ETag, or release is missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: The bearer key is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: >-
+            Kofi approval evidence or an exact destructive confirmation is
+            required, a gateway allowlist refused the resource, or a Context API
+            self-protection rule blocked the request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: The dispatcher id or the addressed resource does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: >-
+            The request conflicts with current state, for example a moved branch
+            head or a duplicate operations-log entryId.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: The request body exceeds the 512kb limit.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: The rate limit was exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: >-
+            A database-backed dispatcher was called while MongoDB is
+            unavailable. Provider dispatchers stay available.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    ZoroEngineeringBearer:
+      type: http
+      scheme: bearer
+      description: >-
+        The ZORO_ENGINEERING_API_KEY value. This key authenticates the caller to
+        the Context API only. Provider credentials are never carried here.
+
+  schemas:
+    OperationRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        operation:
+          type: string
+          maxLength: 128
+          description: >-
+            The action within the dispatcher.
+
+
+            engineering.read: getProfile, listProjects, getProject, listTasks,
+            getTask, listCodingConventions, getCodingConvention,
+            listInstructionSets, getInstructionSet, listIdeasHubSections,
+            getIdeasHubSection, listGlossaryEntries, getGlossaryEntry,
+            listLearnings, getLearning.
+
+
+            engineering.write: createProject, updateProject, createTask,
+            updateTask, createProfile, updateProfile, createCodingConvention,
+            updateCodingConvention, createInstructionSet, updateInstructionSet,
+            createIdeasHubSection, updateIdeasHubSection, createGlossaryEntry,
+            updateGlossaryEntry, createLearning, updateLearning.
+
+
+            engineering.archive: archiveProject, archiveTask, archiveProfile,
+            archiveCodingConvention, archiveInstructionSet,
+            archiveIdeasHubSection, archiveGlossaryEntry, archiveLearning.
+
+
+            github.read: listRepositories, getContent, listBranches,
+            getPullRequest. github.write: createBranch, updateBranch, createFile,
+            updateFile, createPullRequest, updatePullRequest. github.review:
+            getPullRequest, updatePullRequest, mergePullRequest.
+            github.destructive: deleteFile.
+
+
+            vercel.read, vercel.write, vercel.destructive: the Vercel gateway
+            catalogue, for example listProjects, createDeployment,
+            rollbackProject, deleteProject.
+
+
+            heroku.execute: a Heroku gateway operationId, for example
+            listHerokuApps, updateHerokuFormation, queryHerokuLogs.
+
+
+            opslog.read: listOperationsLog, getOperationsLogEntry.
+            opslog.write: appendOperationsLogEntry.
+        parameters:
+          type: object
+          additionalProperties: true
+          description: >-
+            Inputs for the chosen operation: identifiers, filters, and payload
+            fields. For engineering.write this is the record body plus an
+            identifier for updates. For github operations use owner, repo, and
+            the operation's own fields. For heroku.execute use params, query, and
+            body sub-objects. Never place credentials or authorization headers
+            here.
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        approval:
+          $ref: '#/components/schemas/Approval'
+        confirmation:
+          $ref: '#/components/schemas/Confirmation'
+
+    Pagination:
+      type: object
+      additionalProperties: false
+      description: List controls for read operations.
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          description: Offset-mode page number.
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Offset-mode page size.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Cursor-mode page size.
+        cursor:
+          type: string
+          description: Opaque cursor returned as meta.nextCursor by the previous page.
+        view:
+          type: string
+          enum: [summary, detail]
+        includeTotal:
+          type: boolean
+          description: Cursor mode omits the total count unless this is true.
+        updatedAfter:
+          type: string
+          format: date-time
+
+    Approval:
+      type: object
+      additionalProperties: false
+      description: >-
+        Explicit Kofi authorisation. Required for merge, production-sensitive,
+        security-sensitive, billing, access-admin, and destructive operations.
+      required: [approvedBy, authority, reason]
+      properties:
+        approvedBy:
+          type: string
+          const: Kofi
+          description: Must be exactly "Kofi".
+        authority:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: What the approval rests on, for example an issue or decision record.
+        reason:
+          type: string
+          minLength: 8
+          maxLength: 255
+          description: Why the operation is authorised. At least 8 characters.
+        workKey:
+          type: string
+          maxLength: 255
+          description: Optional project, task, or ticket key the approval belongs to.
+
+    Confirmation:
+      type: object
+      additionalProperties: false
+      description: >-
+        Exact acknowledgement for destructive operations. The resourceType and
+        resourceId must match the resource the request actually targets, so a
+        request aimed at the wrong resource is refused.
+      required: [confirmed, resourceType, resourceId, reason]
+      properties:
+        confirmed:
+          type: boolean
+          const: true
+        resourceType:
+          type: string
+          minLength: 1
+          maxLength: 64
+        resourceId:
+          type: string
+          minLength: 1
+          maxLength: 512
+        reason:
+          type: string
+          minLength: 8
+          maxLength: 255
+
+    OperationResponse:
+      type: object
+      description: >-
+        The shared Context API envelope. data holds a single resource or an array
+        for list operations; meta echoes the dispatcher, the operation, its
+        classification, and pagination for list operations.
+      properties:
+        data:
+          description: The operation result.
+        meta:
+          type: object
+          properties:
+            operationId:
+              type: string
+            operation:
+              type: string
+            classification:
+              type: string
+              enum:
+                - read
+                - write
+                - merge
+                - production-sensitive
+                - security-sensitive
+                - billing
+                - access-admin
+                - destructive
+            count:
+              type: integer
+            mode:
+              type: string
+              enum: [offset, cursor]
+            page:
+              type: integer
+            pageSize:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            hasNextPage:
+              type: boolean
+            nextCursor:
+              type: [string, 'null']
+            version:
+              type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
+        meta:
+          type: object
+          properties:
+            correlationId:
+              type: string
+            version:
+              type: string

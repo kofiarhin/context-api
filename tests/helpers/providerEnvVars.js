@@ -65,10 +65,17 @@ const HEROKU_ENV_VARS = [
   'HEROKU_LOG_FETCH_TIMEOUT_MS', // timeout control
 ];
 
+// src/config/engineering.js (getEngineeringConfig). The unified Zoro dispatcher
+// owns exactly one secret and holds no provider credentials of its own.
+const ENGINEERING_ENV_VARS = [
+  'ZORO_ENGINEERING_API_KEY', // unified dispatcher Bearer key
+];
+
 const PROVIDER_ENV_VARS = Object.freeze([
   ...GITHUB_ENV_VARS,
   ...VERCEL_ENV_VARS,
   ...HEROKU_ENV_VARS,
+  ...ENGINEERING_ENV_VARS,
 ]);
 
 /**
@@ -90,5 +97,6 @@ module.exports = {
   GITHUB_ENV_VARS,
   VERCEL_ENV_VARS,
   HEROKU_ENV_VARS,
+  ENGINEERING_ENV_VARS,
   scrubProviderEnv,
 };

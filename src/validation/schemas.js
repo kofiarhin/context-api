@@ -8,6 +8,7 @@ const {
   TASK_PRIORITIES,
   WORKFLOW_STAGES,
   LEARNING_CATEGORIES,
+  DEVOPS_LOG_STATES,
 } = require('../utils/enums');
 const { ValidationError } = require('../utils/errors');
 const { validateQuery, validateIdentifierParam } = require('./common');
@@ -60,6 +61,17 @@ const QUERY_SCHEMAS = {
     projectId: { type: 'identifier' },
     status: { type: 'enum', values: TASK_STATUSES },
     priority: { type: 'enum', values: TASK_PRIORITIES },
+  },
+
+  // The append-only DevOps log. `state` deliberately uses DEVOPS_LOG_STATES
+  // rather than STATUSES: log entries have their own lifecycle and are never
+  // draft/archived records.
+  operationsLog: {
+    operationId: { type: 'identifier' },
+    state: { type: 'enum', values: DEVOPS_LOG_STATES },
+    projectId: { type: 'identifier' },
+    taskId: { type: 'identifier' },
+    actor: { type: 'identifier' },
   },
 };
 
@@ -121,8 +133,7 @@ module.exports = {
   QUERY_SCHEMAS,
   CONTEXT_RESOLVER_SCHEMA,
   validateIdentifierParam,
-  validateProfileQuery: (query) =>
-    validateQuery(query, {}, { pagination: false }),
+  validateProfileQuery: (query) => validateQuery(query, {}, { pagination: false }),
   validateContextResolverQuery,
   validateCodingConventionQuery: createListValidator('codingConventions'),
   validateProjectQuery: createListValidator('projects'),
@@ -131,4 +142,5 @@ module.exports = {
   validateGlossaryQuery: createListValidator('glossary'),
   validateLearningQuery: createListValidator('learnings'),
   validateTaskQuery: createListValidator('tasks'),
+  validateOperationsLogQuery: createListValidator('operationsLog'),
 };

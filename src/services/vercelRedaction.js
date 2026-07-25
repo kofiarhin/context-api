@@ -2,7 +2,11 @@
 
 const MAX_MESSAGE_LENGTH = 4000;
 const SECRET_PATTERNS = [
-  /authorization\s*[:=]\s*[^\s,;]+/gi,
+  // The optional scheme group matters: without it `Authorization: Bearer <tok>`
+  // redacts only the word "Bearer" and leaves the credential in the log, because
+  // `[^\s,;]+` stops at the space and the later bearer pattern then finds
+  // nothing left to match.
+  /authorization\s*[:=]\s*(?:[A-Za-z]+\s+)?[^\s,;]+/gi,
   /bearer\s+[A-Za-z0-9._~+\/-]+=*/gi,
   /(token|secret|password|api[_-]?key|cookie|connection[_-]?string)\s*[:=]\s*[^\s,;]+/gi,
   /mongodb(?:\+srv)?:\/\/[^\s]+/gi,

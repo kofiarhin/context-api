@@ -110,6 +110,7 @@ describe('provider env allowlist stays in sync with the config loaders', () => {
     'src/config/env.js',
     'src/config/vercel.js',
     'src/config/heroku.js',
+    'src/config/engineering.js',
     'src/middleware/requireGithubRepositoryAccess.js',
   ];
 

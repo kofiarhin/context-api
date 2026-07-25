@@ -140,6 +140,56 @@ one variable makes the whole set required so a typo surfaces immediately. `npm r
 is a static release check that the OpenAPI schema (`docs/openapi/zoro-action.yaml`), spec, plan, and
 production URL stay in sync — run it (or `npm run verify`) before shipping gateway changes.
 
+## The unified Zoro engineering dispatcher (`/api/v1/zoro`)
+
+One route — `POST /api/v1/zoro/operations/:operationId` — makes the whole engineering surface
+reachable from a single GPT Builder Action. GPT Builder caps an Action at 30 operations; the combined
+context, GitHub, Vercel, Heroku, and operations-log surface is far larger, so the schema
+(`docs/openapi/zoro-single-full-engineering-action.yaml`) publishes exactly **one** operationId and
+selects behaviour through a path parameter instead.
+
+Two invariants make this safe, and both are load-bearing:
+
+- **It is not a proxy.** `operationId` picks one of fifteen entries in
+  `src/services/zoro/zoroCatalogue.js`; it never names an upstream URL, path, or HTTP verb. The
+  request envelope is closed (`operation`, `parameters`, `pagination`, `approval`, `confirmation`) —
+  an unknown field is a 400, so a `path`/`url`/`method` field cannot be smuggled in.
+- **It never calls itself over HTTP.** Every catalogue entry names a target service module and
+  method, invoked in-process. Direct routes stay untouched for backward compatibility.
+
+`zoroCatalogue` derives its Vercel and Heroku operation lists from the existing
+`vercelDispatcher.CATALOG` and `herokuRoutes` allowlists rather than restating them, so the unified
+surface cannot drift from the direct gateways.
+
+`src/services/zoro/zoroPolicy.js` adds only *dispatcher-level* guards: explicit Kofi approval for
+merge/production-sensitive/security-sensitive/billing/access-admin/destructive work, an exact
+resource-naming confirmation for destructive work, and a required expected SHA/ETag/release for
+state-sensitive operations. Provider policy — GitHub workflow protection, Vercel allowlists, Heroku
+switches and self-protection — is **not** reimplemented here; it runs inside the delegated services,
+and no request field can bypass it. Keep it that way.
+
+Auth is `ZORO_ENGINEERING_API_KEY` only. It deliberately does not accept another gateway's bearer key
+(unlike `requireVercelActionAuth`, which shares the GitHub key): this one route reaches every
+subsystem, so honouring a narrower key would silently widen its blast radius. Like the provider
+gateways it is mounted ahead of `requireDatabase`, so a Mongo outage cannot take GitHub/Vercel/Heroku
+work offline — the six database-backed dispatchers assert availability individually.
+
+### The append-only DevOps log
+
+`src/models/devopsLogEntry.model.js` backs `opslog.read`/`opslog.write`. It is the one model that
+does **not** use `sharedFields()`: soft delete and a mutable status field would defeat an audit log.
+Mongoose pre-hooks refuse every update and delete, so append-only holds even if a caller bypasses
+`devopsLog.service`. Test cleanup goes through `Model.collection.deleteMany()` underneath the hooks.
+
+All ten lifecycle states are distinct and none is an alias — `failed` ≠ `blocked`, `passed` ≠
+`completed`, `deployed` ≠ `completed`, `rolled-back` ≠ `failed`, `resolved` ≠ `completed`. The service
+validates against the enum verbatim and never coerces a near-miss. `zoroRedaction.js` strips secrets,
+authorization headers, private keys, config-var values, and temporary provider URLs (logplex,
+pre-signed S3) at the single point where data enters the log.
+
+`npm run verify:engineering-action` is the static release check: exactly one operationId, the
+30-operation ceiling, schema/catalogue parity, production URL, and absence of any proxy field.
+
 ## Security posture
 
 This MVP is intentionally public and unauthenticated — every caller can read and write. Do not store
