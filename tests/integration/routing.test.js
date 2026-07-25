@@ -88,11 +88,15 @@ describe('routing and envelope conventions', () => {
     });
 
     it('replaces a malformed ID rather than echoing it into logs', async () => {
+      // Newlines are rejected by the HTTP client before the request reaches
+      // Express. Spaces are transport-safe but still invalid under VALID_ID, so
+      // this exercises the middleware rather than Superagent's header parser.
+      const malformed = 'bad id with spaces';
       const response = await request(app)
         .get('/api/v1/not-a-domain')
-        .set('x-correlation-id', 'bad id\nwith newline');
+        .set('x-correlation-id', malformed);
 
-      expect(response.headers['x-correlation-id']).not.toContain('newline');
+      expect(response.headers['x-correlation-id']).not.toBe(malformed);
       expect(response.headers['x-correlation-id']).toMatch(/^[0-9a-f-]{36}$/);
     });
   });
