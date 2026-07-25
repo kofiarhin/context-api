@@ -2,3 +2,8 @@ node_modules
 coverage
 client
 package-lock.json
+
+# Generated OpenAPI schema. It is emitted as JSON-formatted YAML and read by
+# scripts/validate-heroku-gateway-release.js via JSON.parse; Prettier rewrites it
+# to idiomatic YAML, which breaks both that parse and the generator freshness check.
+docs/openapi/zoro-heroku-action.yaml

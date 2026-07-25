@@ -2,6 +2,10 @@
 
 const { ValidationError } = require('../utils/errors');
 
+// Matching control characters is the entire purpose of this pattern: they are
+// rejected in Heroku identifiers and body values, so no-control-regex is a
+// false positive here rather than a smell.
+// eslint-disable-next-line no-control-regex
 const CONTROL = /[\u0000-\u001f\u007f]/;
 const MAX_IDENTIFIER = 255;
 const MAX_BODY_KEYS = 100;

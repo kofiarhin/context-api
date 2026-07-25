@@ -19,7 +19,13 @@ module.exports = [
       },
     },
     rules: {
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrors: 'none' }],
+      // ignoreRestSiblings covers the rest-omit idiom the gateways use to strip
+      // envelope fields, e.g. `const { approval, ...payload } = body`, where the
+      // named bindings exist only to keep those keys out of the rest object.
+      'no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', caughtErrors: 'none', ignoreRestSiblings: true },
+      ],
       'no-console': 'error',
       eqeqeq: ['error', 'smart'],
       'prefer-const': 'error',

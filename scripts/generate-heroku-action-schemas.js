@@ -136,7 +136,9 @@ function main() {
     }
   }
 
-  console.log(check ? 'Heroku Action schemas are current.' : 'Heroku Action schemas generated.');
+  process.stdout.write(
+    check ? 'Heroku Action schemas are current.\n' : 'Heroku Action schemas generated.\n'
+  );
 }
 
 if (require.main === module) main();

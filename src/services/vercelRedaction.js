@@ -7,7 +7,7 @@ const SECRET_PATTERNS = [
   // `[^\s,;]+` stops at the space and the later bearer pattern then finds
   // nothing left to match.
   /authorization\s*[:=]\s*(?:[A-Za-z]+\s+)?[^\s,;]+/gi,
-  /bearer\s+[A-Za-z0-9._~+\/-]+=*/gi,
+  /bearer\s+[A-Za-z0-9._~+/-]+=*/gi,
   /(token|secret|password|api[_-]?key|cookie|connection[_-]?string)\s*[:=]\s*[^\s,;]+/gi,
   /mongodb(?:\+srv)?:\/\/[^\s]+/gi,
   /postgres(?:ql)?:\/\/[^\s]+/gi,

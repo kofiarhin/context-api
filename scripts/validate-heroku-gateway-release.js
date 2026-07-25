@@ -84,4 +84,4 @@ if (!dispatch || !dispatch.post) throw new Error('Heroku dispatcher OpenAPI oper
 if (dispatch.post.operationId !== 'executeHerokuOperation')
   throw new Error('Heroku dispatcher operation ID is invalid.');
 
-console.log(`Heroku gateway release validation passed (${routes.length} routes).`);
+process.stdout.write(`Heroku gateway release validation passed (${routes.length} routes).\n`);

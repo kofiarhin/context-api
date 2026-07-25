@@ -1,95 +1,160 @@
 {
-  'openapi': '3.1.0',
-  'info':
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Context API Heroku Gateway",
+    "version": "1.0.0",
+    "description": "Execute allowlisted Heroku Platform API operations through Context API. Sensitive operations require explicit Kofi approval evidence. Config values are redacted and self-management protections are enforced."
+  },
+  "servers": [
     {
-      'title': 'Context API Heroku Gateway',
-      'version': '1.0.0',
-      'description': 'Execute allowlisted Heroku Platform API operations through Context API. Sensitive operations require explicit Kofi approval evidence. Config values are redacted and self-management protections are enforced.',
-    },
-  'servers': [{ 'url': 'https://context-api-3b9dfadf403e.herokuapp.com' }],
-  'components':
-    { 'securitySchemes': { 'HerokuGatewayBearer': { 'type': 'http', 'scheme': 'bearer' } } },
-  'paths':
-    {
-      '/api/v1/heroku/operations/{operationId}':
-        {
-          'post':
-            {
-              'operationId': 'executeHerokuOperation',
-              'summary': 'Execute a registered Heroku gateway operation',
-              'description': 'Use an operationId from the approved Heroku gateway catalogue. Supply route identifiers in params, Heroku query values in query, and the upstream mutation payload in body. Sensitive operations also require approval evidence.',
-              'security': [{ 'HerokuGatewayBearer': [] }],
-              'parameters':
-                [
-                  {
-                    'name': 'operationId',
-                    'in': 'path',
-                    'required': true,
-                    'schema': { 'type': 'string', 'minLength': 1, 'maxLength': 100 },
+      "url": "https://context-api-3b9dfadf403e.herokuapp.com"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "HerokuGatewayBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "paths": {
+    "/api/v1/heroku/operations/{operationId}": {
+      "post": {
+        "operationId": "executeHerokuOperation",
+        "summary": "Execute a registered Heroku gateway operation",
+        "description": "Use an operationId from the approved Heroku gateway catalogue. Supply route identifiers in params, Heroku query values in query, and the upstream mutation payload in body. Sensitive operations also require approval evidence.",
+        "security": [
+          {
+            "HerokuGatewayBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "params": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
                   },
-                ],
-              'requestBody':
-                {
-                  'required': false,
-                  'content':
-                    {
-                      'application/json':
-                        {
-                          'schema':
-                            {
-                              'type': 'object',
-                              'properties':
-                                {
-                                  'params':
-                                    {
-                                      'type': 'object',
-                                      'additionalProperties': { 'type': 'string' },
-                                    },
-                                  'query': { 'type': 'object', 'additionalProperties': true },
-                                  'body': { 'type': 'object', 'additionalProperties': true },
-                                  'expectedEtag': { 'type': 'string' },
-                                  'range': { 'type': 'string' },
-                                  'approval':
-                                    {
-                                      'type': 'object',
-                                      'required': ['approvedBy', 'authority', 'reason'],
-                                      'properties':
-                                        {
-                                          'approvedBy': { 'type': 'string', 'const': 'Kofi' },
-                                          'authority': { 'type': 'string' },
-                                          'workKey': { 'type': 'string' },
-                                          'reason': { 'type': 'string' },
-                                          'expectedResourceId': { 'type': 'string' },
-                                          'expectedEtag': { 'type': 'string' },
-                                          'expectedCurrentRelease': { 'type': 'string' },
-                                        },
-                                      'additionalProperties': false,
-                                    },
-                                },
-                              'additionalProperties': false,
-                            },
-                        },
+                  "query": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "body": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "expectedEtag": {
+                    "type": "string"
+                  },
+                  "range": {
+                    "type": "string"
+                  },
+                  "approval": {
+                    "type": "object",
+                    "required": [
+                      "approvedBy",
+                      "authority",
+                      "reason"
+                    ],
+                    "properties": {
+                      "approvedBy": {
+                        "type": "string",
+                        "const": "Kofi"
+                      },
+                      "authority": {
+                        "type": "string"
+                      },
+                      "workKey": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "expectedResourceId": {
+                        "type": "string"
+                      },
+                      "expectedEtag": {
+                        "type": "string"
+                      },
+                      "expectedCurrentRelease": {
+                        "type": "string"
+                      }
                     },
+                    "additionalProperties": false
+                  }
                 },
-              'responses':
-                {
-                  '200': { 'description': 'Successful normalized Heroku response' },
-                  '201': { 'description': 'Heroku resource created' },
-                  '202': { 'description': 'Heroku accepted an asynchronous operation' },
-                  '204': { 'description': 'Heroku operation completed without a response body' },
-                  '400': { 'description': 'Invalid operation or request' },
-                  '401': { 'description': 'Missing or invalid Heroku gateway Bearer key' },
-                  '402': { 'description': 'Billing verification required' },
-                  '403': { 'description': 'Resource policy or approval denied the operation' },
-                  '404': { 'description': 'Operation or Heroku resource not found' },
-                  '409': { 'description': 'Heroku resource conflict' },
-                  '412': { 'description': 'Stale resource precondition' },
-                  '422': { 'description': 'Heroku rejected the request' },
-                  '429': { 'description': 'Heroku rate limit reached' },
-                  '502': { 'description': 'Heroku unavailable' },
-                  '504': { 'description': 'Heroku request timed out' },
-                },
-            },
+                "additionalProperties": false
+              }
+            }
+          }
         },
-    },
+        "responses": {
+          "200": {
+            "description": "Successful normalized Heroku response"
+          },
+          "201": {
+            "description": "Heroku resource created"
+          },
+          "202": {
+            "description": "Heroku accepted an asynchronous operation"
+          },
+          "204": {
+            "description": "Heroku operation completed without a response body"
+          },
+          "400": {
+            "description": "Invalid operation or request"
+          },
+          "401": {
+            "description": "Missing or invalid Heroku gateway Bearer key"
+          },
+          "402": {
+            "description": "Billing verification required"
+          },
+          "403": {
+            "description": "Resource policy or approval denied the operation"
+          },
+          "404": {
+            "description": "Operation or Heroku resource not found"
+          },
+          "409": {
+            "description": "Heroku resource conflict"
+          },
+          "412": {
+            "description": "Stale resource precondition"
+          },
+          "422": {
+            "description": "Heroku rejected the request"
+          },
+          "429": {
+            "description": "Heroku rate limit reached"
+          },
+          "502": {
+            "description": "Heroku unavailable"
+          },
+          "504": {
+            "description": "Heroku request timed out"
+          }
+        }
+      }
+    }
+  }
 }
