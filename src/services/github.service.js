@@ -1,14 +1,25 @@
 'use strict';
 
 const logger = require('../utils/logger');
+const { getEnv } = require('../config/env');
 const { getInstallationClient } = require('./githubClient');
+const { getUserClient } = require('./githubUserClient');
 const { translateGithubError } = require('./githubErrors');
 const {
   GithubConflictError,
+  GithubForbiddenError,
   GithubNotFoundError,
+  GithubUnavailableError,
+  GithubValidationError,
   UnsupportedContentError,
 } = require('../utils/errors');
 const serializer = require('../serializers/github.serializer');
+
+// GitHub's own repository-name rules, applied here so an invalid name is a 400
+// from the gateway rather than a 422 surfaced from upstream.
+const REPOSITORY_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
+const REPOSITORY_VISIBILITIES = new Set(['private', 'public']);
+const DEFAULT_BRANCH = 'main';
 
 /**
  * GitHub domain service.
@@ -566,8 +577,137 @@ async function mergePullRequest(
   });
 }
 
+/**
+ * Creates a repository in the configured owner account.
+ *
+ * This is the one operation that cannot use the App installation client — an
+ * installation cannot create a repository — so it uses the account-level client
+ * from `githubUserClient`. Every other operation in this module keeps using the
+ * installation client, and the user token is never returned, logged, or echoed.
+ *
+ * The owner is checked against `githubAllowedOwner` rather than trusted from the
+ * request, so the gateway cannot be pointed at another account. After creation
+ * the repository is read back and probed with the *installation* client: a
+ * repository the App cannot see is useless to the rest of the gateway, so that
+ * is surfaced as a clear error instead of a success the next call would fail on.
+ */
+async function createRepository({ owner, name, visibility, description }, deps = {}) {
+  const env = deps.env || getEnv();
+
+  if (!env.githubRepositoryCreationEnabled) {
+    throw new GithubForbiddenError('GitHub repository creation is disabled.');
+  }
+
+  const requestedOwner = String(owner ?? '')
+    .trim()
+    .toLowerCase();
+
+  if (!requestedOwner || requestedOwner !== env.githubAllowedOwner) {
+    throw new GithubForbiddenError('The requested GitHub owner is not allowed.', [
+      { field: 'owner', message: 'Does not match the configured allowed owner.' },
+    ]);
+  }
+
+  const repositoryName = String(name ?? '').trim();
+
+  if (!REPOSITORY_NAME_PATTERN.test(repositoryName)) {
+    throw new GithubValidationError(
+      'Repository name must start with a letter or digit and may contain only letters, digits, dots, underscores, and hyphens.',
+      [{ field: 'name', message: 'Invalid repository name.' }]
+    );
+  }
+
+  const requestedVisibility = String(visibility ?? 'private')
+    .trim()
+    .toLowerCase();
+
+  if (!REPOSITORY_VISIBILITIES.has(requestedVisibility)) {
+    throw new GithubValidationError('Repository visibility must be private or public.', [
+      { field: 'visibility', message: 'Expected "private" or "public".' },
+    ]);
+  }
+
+  const userClient = deps.userClient || (await getUserClient({ env }));
+  const context = { repository: `${requestedOwner}/${repositoryName}` };
+
+  const existing = await callAllowingMissing(
+    () => userClient.rest.repos.get({ owner: requestedOwner, repo: repositoryName }),
+    context
+  );
+
+  if (existing) {
+    throw new GithubConflictError('The repository already exists.', [
+      { field: 'name', message: repositoryName },
+    ]);
+  }
+
+  await call(
+    () =>
+      userClient.rest.repos.createForAuthenticatedUser({
+        name: repositoryName,
+        description: typeof description === 'string' ? description.trim() : '',
+        private: requestedVisibility === 'private',
+        // Initialising with a README is required, not caller-controlled: an
+        // empty repository has no default branch, so `main` could not be
+        // established and no later file or branch write would have a base.
+        auto_init: true,
+      }),
+    context
+  );
+
+  // GitHub honours the account's default-branch setting, which is not
+  // guaranteed to be `main`, so it is renamed rather than assumed.
+  const created = await call(
+    () => userClient.rest.repos.get({ owner: requestedOwner, repo: repositoryName }),
+    context
+  );
+
+  if (created.data.default_branch && created.data.default_branch !== DEFAULT_BRANCH) {
+    await call(
+      () =>
+        userClient.rest.repos.renameBranch({
+          owner: requestedOwner,
+          repo: repositoryName,
+          branch: created.data.default_branch,
+          new_name: DEFAULT_BRANCH,
+        }),
+      context
+    );
+  }
+
+  const readback = await call(
+    () => userClient.rest.repos.get({ owner: requestedOwner, repo: repositoryName }),
+    context
+  );
+
+  const installationClient = deps.installationClient || (await getInstallationClient());
+  const installationView = await callAllowingMissing(
+    () => installationClient.rest.repos.get({ owner: requestedOwner, repo: repositoryName }),
+    context
+  );
+
+  if (!installationView) {
+    throw new GithubUnavailableError(
+      'The repository was created but the GitHub App installation cannot access it. Grant the installation access to the repository before using the gateway on it.',
+      [{ field: 'installation', message: context.repository }]
+    );
+  }
+
+  logger.info('github.repository.created', {
+    ...context,
+    visibility: readback.data.visibility || requestedVisibility,
+    defaultBranch: readback.data.default_branch,
+  });
+
+  return serializer.serializeCreatedRepository({
+    repository: readback.data,
+    installationAccessible: true,
+  });
+}
+
 module.exports = {
   listRepositories,
+  createRepository,
   getContent,
   listBranches,
   createBranch,

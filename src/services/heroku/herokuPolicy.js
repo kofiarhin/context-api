@@ -2,6 +2,7 @@
 
 const { AppError } = require('../../utils/errors');
 const { getHerokuConfig } = require('../../config/heroku');
+const { getZoroEngineeringConfig } = require('../../config/zoroEngineering');
 
 const SENSITIVE_KEYS =
   /(token|secret|password|private[_-]?key|database_url|mongodb|redis|credential|certificate|api[_-]?key|uri|url)/i;
@@ -26,8 +27,18 @@ function matches(value, allowlist) {
   return allowlist.some((item) => item.toLowerCase() === String(value).toLowerCase());
 }
 
-function requireApproval(input, classification) {
+/**
+ * Requires Kofi approval for anything beyond a read or an ordinary write.
+ *
+ * Full Operator mode stands this requirement down. It is applied *after* the
+ * feature switches below, so a classification whose switch is off stays refused
+ * in either mode: HEROKU_BILLING_OPERATIONS_ENABLED=false still blocks app
+ * creation, and the destructive, access-admin, and Private Space switches still
+ * hold. Nothing here reaches Context API self-protection or config redaction.
+ */
+function requireApproval(input, classification, fullOperatorMode = false) {
   if (classification === 'read' || classification === 'normal-write') return;
+  if (fullOperatorMode) return;
   const approval = input.approval;
   if (!approval || approval.approvedBy !== 'Kofi' || !approval.authority || !approval.reason) {
     throw denied('Explicit Kofi approval evidence is required for this Heroku operation.');
@@ -36,6 +47,7 @@ function requireApproval(input, classification) {
 
 function enforce({ input, descriptor, baseEnv = {}, source = process.env }) {
   const config = getHerokuConfig(baseEnv, source);
+  const { fullOperatorMode } = getZoroEngineeringConfig(source);
   const classification = descriptor.classification;
   const mutating = descriptor.method !== 'GET';
 
@@ -49,7 +61,7 @@ function enforce({ input, descriptor, baseEnv = {}, source = process.env }) {
   if (classification === 'private-space-admin' && !config.herokuPrivateSpaceOperationsEnabled)
     throw denied('Heroku Private Space administration is disabled.');
 
-  requireApproval(input, classification);
+  requireApproval(input, classification, fullOperatorMode);
 
   if (config.herokuResourceAccess !== 'all') {
     if (input.app && !matches(input.app, config.herokuAppAllowlist))

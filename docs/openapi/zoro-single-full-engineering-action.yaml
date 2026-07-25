@@ -213,10 +213,18 @@ components:
 
 
             github.read: listRepositories, getContent, listBranches,
-            getPullRequest. github.write: createBranch, updateBranch, createFile,
-            updateFile, createPullRequest, updatePullRequest. github.review:
-            getPullRequest, updatePullRequest, mergePullRequest.
-            github.destructive: deleteFile.
+            getPullRequest. github.write: createRepository, createBranch,
+            updateBranch, createFile, updateFile, createPullRequest,
+            updatePullRequest. github.review: getPullRequest, updatePullRequest,
+            mergePullRequest. github.destructive: deleteFile.
+
+
+            createRepository takes owner, name, visibility (private or public,
+            defaulting to private), and an optional description. The owner must
+            match GITHUB_ALLOWED_OWNER, the repository is initialised with a
+            README on a main default branch, and the response reports whether the
+            GitHub App installation can already read it. Repository deletion is
+            deliberately not offered.
 
 
             vercel.read, vercel.write, vercel.destructive: the Vercel gateway

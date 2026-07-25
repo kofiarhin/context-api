@@ -194,8 +194,32 @@ function serializeMergeResult({ owner, repo, number, response }) {
   };
 }
 
+/**
+ * Serializes a newly created repository.
+ *
+ * Field by field, like every serializer here, so nothing GitHub returns about
+ * the authenticated account can leak. `installationAccessible` reports whether
+ * the GitHub App can already see the repository, which is what decides if the
+ * rest of the gateway can work on it.
+ */
+function serializeCreatedRepository({ repository, installationAccessible }) {
+  return {
+    owner: repository.owner ? repository.owner.login : null,
+    name: repository.name,
+    fullName: repository.full_name,
+    private: Boolean(repository.private),
+    visibility: nullable(repository.visibility),
+    defaultBranch: nullable(repository.default_branch),
+    htmlUrl: nullable(repository.html_url),
+    cloneUrl: nullable(repository.clone_url),
+    createdAt: nullable(repository.created_at),
+    installationAccessible: Boolean(installationAccessible),
+  };
+}
+
 module.exports = {
   serializeRepository,
+  serializeCreatedRepository,
   serializeDirectoryEntry,
   serializeFileContent,
   serializeDirectoryContent,

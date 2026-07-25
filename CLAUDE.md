@@ -168,6 +168,42 @@ state-sensitive operations. Provider policy — GitHub workflow protection, Verc
 switches and self-protection — is **not** reimplemented here; it runs inside the delegated services,
 and no request field can bypass it. Keep it that way.
 
+### Full Operator mode
+
+`ZORO_FULL_OPERATOR_MODE` (in `src/config/zoroEngineering.js`) **defaults to true**; an omitted or
+blank value means enabled, and anything other than `true`/`false` fails startup rather than guessing.
+When enabled it stands down the _per-request_ Kofi approval for write, merge, production-sensitive,
+security-sensitive, billing, and access-admin work — enabling the mode is the standing approval.
+Setting it to `false` restores the per-request requirement everywhere.
+
+It changes exactly one guard. `FULL_OPERATOR_AUTO_ALLOWED` in `zoroPolicy.js` deliberately excludes
+`destructive`, so destructive work still needs both approval and an exact resource-naming
+confirmation. Expected SHA/ETag/release checks, provider allowlists and account boundaries, the
+Heroku feature switches, secret redaction, Context API self-protection, and the closed catalogue are
+untouched — and the mode is read from configuration, never from the request, so no caller can assert
+it. `vercelPolicy` and `herokuPolicy` apply it only at their approval step, after their feature
+switches, so a disabled switch still refuses in either mode.
+
+Tests that assert restricted-mode behaviour must pin `ZORO_FULL_OPERATOR_MODE: 'false'` explicitly;
+`tests/helpers/providerEnvVars.js` scrubs the variable so a developer's local value cannot make an
+approval test pass for the wrong reason.
+
+### Repository creation
+
+`github.write/createRepository` is the one operation that cannot use the App installation client, so
+`src/services/githubUserClient.js` builds a separate account-level client from
+`GITHUB_USER_ACCESS_TOKEN`. Everything else keeps using `githubClient.js`. The owner is checked
+against `GITHUB_ALLOWED_OWNER` rather than trusted from the request, and that variable has **no
+default** — a hard-coded fallback would silently widen access if it were ever dropped. The whole
+group is gated behind `GITHUB_REPOSITORY_CREATION_ENABLED`, which is a separate opt-in from the
+all-or-nothing `GITHUB_VARIABLES` set, so leaving it off must not make the token required.
+
+Creation initialises with a README (an empty repository has no default branch to rename), renames the
+default branch to `main` when the account default differs, reads the repository back, and then probes
+it with the _installation_ client — a repository the App cannot see is useless to the rest of the
+gateway, so that is a clear error rather than a success the next call would fail on. Repository
+deletion is deliberately not offered.
+
 Auth is `ZORO_ENGINEERING_API_KEY` only. It deliberately does not accept another gateway's bearer key
 (unlike `requireVercelActionAuth`, which shares the GitHub key): this one route reaches every
 subsystem, so honouring a narrower key would silently widen its blast radius. Like the provider

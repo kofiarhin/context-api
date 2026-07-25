@@ -44,6 +44,28 @@ function post(operationId, body) {
     .send(body);
 }
 
+/**
+ * Runs one case with Full Operator mode disabled.
+ *
+ * Full Operator mode defaults to enabled and stands down per-request approval,
+ * so the refusal cases below pin restricted mode explicitly rather than relying
+ * on the default. These requests travel the real HTTP path, where the policy
+ * reads process.env, so the switch is set there. `tests/setupEnv.js` scrubs the
+ * variable, so restoring the ambient state means deleting it again.
+ *
+ * The Full Operator counterparts live in tests/unit/zoroFullOperator.test.js and
+ * tests/integration/zoroFullOperatorAction.test.js.
+ */
+async function withRestrictedMode(run) {
+  process.env.ZORO_FULL_OPERATOR_MODE = 'false';
+
+  try {
+    return await run();
+  } finally {
+    delete process.env.ZORO_FULL_OPERATOR_MODE;
+  }
+}
+
 describe('github.read dispatcher', () => {
   it('lists repositories through the collection envelope', async () => {
     githubService.listRepositories.mockResolvedValue({
@@ -220,34 +242,38 @@ describe('github.write dispatcher', () => {
 });
 
 describe('github.review dispatcher', () => {
-  it('refuses a merge without Kofi approval', async () => {
-    const response = await post('github.review', {
-      operation: 'mergePullRequest',
-      parameters: {
-        owner: 'kofiarhin',
-        repo: 'context-api',
-        pullNumber: 9,
-        expectedHeadSha: 'abc',
-        mergeMethod: 'squash',
-      },
-    });
+  it('refuses a merge without Kofi approval in restricted mode', async () => {
+    const response = await withRestrictedMode(() =>
+      post('github.review', {
+        operation: 'mergePullRequest',
+        parameters: {
+          owner: 'kofiarhin',
+          repo: 'context-api',
+          pullNumber: 9,
+          expectedHeadSha: 'abc',
+          mergeMethod: 'squash',
+        },
+      })
+    );
 
     expect(response.status).toBe(403);
     expect(githubService.mergePullRequest).not.toHaveBeenCalled();
   });
 
-  it('refuses a merge approved by anyone other than Kofi', async () => {
-    const response = await post('github.review', {
-      operation: 'mergePullRequest',
-      parameters: {
-        owner: 'kofiarhin',
-        repo: 'context-api',
-        pullNumber: 9,
-        expectedHeadSha: 'abc',
-        mergeMethod: 'squash',
-      },
-      approval: { ...APPROVAL, approvedBy: 'Zoro' },
-    });
+  it('refuses a merge approved by anyone other than Kofi in restricted mode', async () => {
+    const response = await withRestrictedMode(() =>
+      post('github.review', {
+        operation: 'mergePullRequest',
+        parameters: {
+          owner: 'kofiarhin',
+          repo: 'context-api',
+          pullNumber: 9,
+          expectedHeadSha: 'abc',
+          mergeMethod: 'squash',
+        },
+        approval: { ...APPROVAL, approvedBy: 'Zoro' },
+      })
+    );
 
     expect(response.status).toBe(403);
     expect(githubService.mergePullRequest).not.toHaveBeenCalled();
@@ -400,11 +426,13 @@ describe('vercel dispatchers', () => {
     expect(response.status).toBe(201);
   });
 
-  it('treats a production rollback as production-sensitive', async () => {
-    const response = await post('vercel.write', {
-      operation: 'rollbackProject',
-      parameters: { project: 'site' },
-    });
+  it('treats a production rollback as production-sensitive in restricted mode', async () => {
+    const response = await withRestrictedMode(() =>
+      post('vercel.write', {
+        operation: 'rollbackProject',
+        parameters: { project: 'site' },
+      })
+    );
 
     expect(response.status).toBe(403);
     expect(response.body.meta).toBeDefined();
@@ -522,11 +550,13 @@ describe('heroku.execute dispatcher', () => {
     });
   });
 
-  it('refuses a production-sensitive Heroku operation without approval', async () => {
-    const response = await post('heroku.execute', {
-      operation: 'updateHerokuFormation',
-      parameters: { params: { app: 'context-api', type: 'web' }, body: { quantity: 2 } },
-    });
+  it('refuses a production-sensitive Heroku operation without approval in restricted mode', async () => {
+    const response = await withRestrictedMode(() =>
+      post('heroku.execute', {
+        operation: 'updateHerokuFormation',
+        parameters: { params: { app: 'context-api', type: 'web' }, body: { quantity: 2 } },
+      })
+    );
 
     expect(response.status).toBe(403);
     expect(herokuService.execute).not.toHaveBeenCalled();

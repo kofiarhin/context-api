@@ -110,7 +110,13 @@ describe('Vercel deployment creation target handling', () => {
   });
 
   it('still requires explicit production approval for a Production target', async () => {
-    const { client, service } = createSubject({ handlers: {} });
+    // Restricted mode pinned explicitly: Full Operator mode defaults to enabled
+    // and stands this approval down, which is asserted separately in
+    // tests/unit/zoroFullOperator.test.js.
+    const { client, service } = createSubject({
+      handlers: {},
+      source: { ...SOURCE, ZORO_FULL_OPERATOR_MODE: 'false' },
+    });
 
     await expect(
       service.createDeployment({ project: 'coffee-shop', target: 'production' })
@@ -297,7 +303,10 @@ describe('Deployment creation through the dispatcher', () => {
   });
 
   it('still requires production approval on a dispatched Production request', async () => {
-    const subject = createSubject({ handlers: {} });
+    const subject = createSubject({
+      handlers: {},
+      source: { ...SOURCE, ZORO_FULL_OPERATOR_MODE: 'false' },
+    });
 
     await expect(
       dispatchWrite({ project: 'coffee-shop', target: 'production' }, subject)

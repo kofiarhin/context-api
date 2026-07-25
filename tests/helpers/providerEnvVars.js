@@ -28,6 +28,9 @@ const GITHUB_ENV_VARS = [
   'GITHUB_REPOSITORY_ACCESS', // resource-access mode
   'GITHUB_REPOSITORY_ALLOWLIST', // owner/repo allowlist
   'ZORO_GITHUB_API_KEY', // gateway Bearer key
+  'GITHUB_REPOSITORY_CREATION_ENABLED', // repository-creation feature switch
+  'GITHUB_ALLOWED_OWNER', // repository-creation owner allowlist
+  'GITHUB_USER_ACCESS_TOKEN', // account-level credential, creation only
 ];
 
 // src/config/vercel.js (getVercelConfig).
@@ -70,6 +73,12 @@ const HEROKU_ENV_VARS = [
 // owns exactly one secret and holds no provider credentials of its own.
 const ENGINEERING_ENV_VARS = [
   'ZORO_ENGINEERING_API_KEY', // unified dispatcher Bearer key
+  // Scrubbed because it defaults to enabled: a developer's local
+  // ZORO_FULL_OPERATOR_MODE=false would otherwise silently reimpose per-request
+  // approval and make the approval tests pass for the wrong reason.
+  'ZORO_FULL_OPERATOR_MODE', // approval-mode switch
+  'ZORO_ENGINEERING_DESTRUCTIVE_OPERATIONS_ENABLED', // feature switch
+  'ZORO_ENGINEERING_REPOSITORY_ALLOWLIST', // allowlist
 ];
 
 const PROVIDER_ENV_VARS = Object.freeze([
