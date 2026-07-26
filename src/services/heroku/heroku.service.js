@@ -4,6 +4,7 @@ const { ValidationError } = require('../../utils/errors');
 const serializer = require('../../serializers/heroku.serializer');
 const client = require('./herokuClient');
 const policy = require('./herokuPolicy');
+const sourceUpload = require('./herokuSourceUpload');
 
 const UPSTREAM_OVERRIDES = {
   transferHerokuApp: '/account/app-transfers',
@@ -39,7 +40,7 @@ function stripControl(input) {
  * with "Request with GET/HEAD method cannot have body" before any network call,
  * which the client then reports as the misleading HEROKU_UNAVAILABLE.
  */
-function requestBody(descriptor, input) {
+function requestBody(descriptor, input, options = {}) {
   if (descriptor.method === 'GET' || descriptor.method === 'HEAD') {
     return undefined;
   }
@@ -56,6 +57,17 @@ function requestBody(descriptor, input) {
   if (descriptor.operationId === 'updateHerokuAppStack') {
     const body = input.body || {};
     return { build_stack: body.build_stack || body.stack };
+  }
+  if (descriptor.operationId === 'createHerokuBuild') {
+    const body = { ...(input.body || {}) };
+    if (body.sourceCapability) {
+      body.source_blob = sourceUpload.buildSourceBlob(
+        body.sourceCapability,
+        options.now || Date.now()
+      );
+      delete body.sourceCapability;
+    }
+    return body;
   }
   return input.body;
 }
@@ -98,6 +110,23 @@ async function execute(descriptor, rawInput, options = {}) {
     return queryLogs(descriptor, input, config, options);
   }
 
+  if (descriptor.operationId === 'uploadHerokuSourceArchive') {
+    const body = input.body || {};
+    const data = await sourceUpload.upload(
+      {
+        capability: input.params.capability || body.capability,
+        repository: body.repository,
+        commitSha: body.commitSha,
+        sourceDirectory: body.sourceDirectory,
+      },
+      {
+        ...options,
+        baseEnv: config,
+      }
+    );
+    return { data: serializer.serialize(descriptor.operationId, data), meta: {}, status: 200 };
+  }
+
   const upstream = UPSTREAM_OVERRIDES[descriptor.operationId] || descriptor.upstream;
   const result = await client.request(descriptor.method, pathFor(upstream, input.params), {
     baseEnv: config,
@@ -106,8 +135,16 @@ async function execute(descriptor, rawInput, options = {}) {
     expectedEtag: input.expectedEtag,
     range: input.range,
     query: input.query,
-    body: requestBody(descriptor, input),
+    body: requestBody(descriptor, input, options),
   });
+
+  if (descriptor.operationId === 'createHerokuSource') {
+    const capability = sourceUpload.issue(result.data, { now: options.now || Date.now() });
+    result.data = {
+      id: result.data && result.data.id,
+      source_blob: capability,
+    };
+  }
 
   if (
     descriptor.operationId === 'listHerokuConfigVarMetadata' ||
