@@ -39,6 +39,12 @@ async function request(method, path, options = {}) {
   if (options.expectedEtag) headers['If-Match'] = options.expectedEtag;
   if (options.range) headers.Range = options.range;
 
+  // Defence in depth: a body on a GET or HEAD makes fetch throw synchronously,
+  // which surfaces as HEROKU_UNAVAILABLE and hides the real cause. The service
+  // already omits it, so reaching this guard means a caller built the request
+  // directly.
+  const sendsBody = method !== 'GET' && method !== 'HEAD' && options.body !== undefined;
+
   let response;
   try {
     response = await (options.fetchImpl || fetch)(
@@ -46,7 +52,7 @@ async function request(method, path, options = {}) {
       {
         method,
         headers,
-        body: options.body === undefined ? undefined : JSON.stringify(options.body),
+        body: sendsBody ? JSON.stringify(options.body) : undefined,
         signal: controller.signal,
       }
     );
