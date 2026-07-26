@@ -30,7 +30,20 @@ function stripControl(input) {
   return { approval, expectedEtag, range, body: sanitizeBody(body), query, params };
 }
 
+/**
+ * Builds the upstream request body for one operation.
+ *
+ * Returns `undefined` for GET and HEAD. A read carries no body, and callers
+ * routinely supply an empty one — the unified Zoro dispatcher defaults `body` to
+ * `{}` for every operation — so without this guard `fetch` rejects the request
+ * with "Request with GET/HEAD method cannot have body" before any network call,
+ * which the client then reports as the misleading HEROKU_UNAVAILABLE.
+ */
 function requestBody(descriptor, input) {
+  if (descriptor.method === 'GET' || descriptor.method === 'HEAD') {
+    return undefined;
+  }
+
   if (descriptor.operationId === 'deleteHerokuConfigVar') {
     return { [input.params.key]: null };
   }
