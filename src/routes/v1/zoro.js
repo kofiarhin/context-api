@@ -8,7 +8,15 @@ const { RouteNotFoundError } = require('../../utils/errors');
 const router = Router();
 
 /**
- * The single executable surface of the unified Zoro engineering Action.
+ * The non-consequential read surface of the unified Zoro engineering Action.
+ *
+ * The controller resolves the exact catalogue operation and refuses every
+ * classification except `read` before the dispatcher can execute it.
+ */
+router.post('/read/:operationId', controller.executeRead);
+
+/**
+ * The complete executable surface of the unified Zoro engineering Action.
  *
  * One route, one path parameter drawn from a closed set of fifteen dispatcher
  * ids. This is deliberately *not* a proxy: `operationId` selects a catalogue
