@@ -7,10 +7,16 @@ const {
   validateEngineeringActionRelease,
   parseSchemaOperationIds,
   parseDispatcherEnum,
+  parseDispatcherEnumForRoute,
+  hasConsequentialFlag,
   SCHEMA_FILE,
-  ROUTE_PATH,
+  FULL_ROUTE_PATH,
+  READ_ROUTE_PATH,
   PRODUCTION_URL,
-  EXPECTED_OPERATION_ID,
+  EXPECTED_OPERATION_IDS,
+  FULL_OPERATION_ID,
+  READ_OPERATION_ID,
+  READ_DISPATCHER_IDS,
   EXPECTED_OPERATION_COUNT,
   MAX_OPERATIONS_PER_SCHEMA,
 } = require('../../scripts/validate-engineering-action-release');
@@ -20,24 +26,36 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const schema = fs.readFileSync(path.join(ROOT, SCHEMA_FILE), 'utf8');
 
 describe('unified engineering Action schema', () => {
-  it('declares exactly one operationId', () => {
+  it('declares exactly the complete and read-only operationIds', () => {
     const operationIds = parseSchemaOperationIds(schema);
 
     expect(operationIds).toHaveLength(EXPECTED_OPERATION_COUNT);
-    expect(operationIds).toEqual([EXPECTED_OPERATION_ID]);
+    expect(operationIds).toEqual(EXPECTED_OPERATION_IDS);
   });
 
   it('stays within the 30-operation GPT Builder ceiling', () => {
     expect(parseSchemaOperationIds(schema).length).toBeLessThanOrEqual(MAX_OPERATIONS_PER_SCHEMA);
   });
 
-  it('publishes the unified route against the production host', () => {
-    expect(schema).toContain(ROUTE_PATH);
+  it('publishes both routes against the production host', () => {
+    expect(schema).toContain(FULL_ROUTE_PATH);
+    expect(schema).toContain(READ_ROUTE_PATH);
     expect(schema).toContain(PRODUCTION_URL);
   });
 
-  it('publishes exactly the fifteen implemented dispatcher ids', () => {
+  it('marks only the server-enforced read operation as non-consequential', () => {
+    expect(hasConsequentialFlag(schema, FULL_OPERATION_ID, true)).toBe(true);
+    expect(hasConsequentialFlag(schema, READ_OPERATION_ID, false)).toBe(true);
+  });
+
+  it('publishes every implemented dispatcher through the complete route', () => {
     expect(parseDispatcherEnum(schema).sort()).toEqual([...DISPATCHER_IDS].sort());
+  });
+
+  it('publishes only dispatchers containing read operations through the read route', () => {
+    expect(parseDispatcherEnumForRoute(schema, READ_ROUTE_PATH).sort()).toEqual(
+      [...READ_DISPATCHER_IDS].sort()
+    );
   });
 
   it('never exposes a generic method or path proxy field', () => {
