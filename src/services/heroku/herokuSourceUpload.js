@@ -1,6 +1,7 @@
 'use strict';
 
 const crypto = require('node:crypto');
+const path = require('node:path');
 const zlib = require('node:zlib');
 const { getInstallationClient } = require('../githubClient');
 const { AppError, ValidationError, PayloadTooLargeError } = require('../../utils/errors');
@@ -9,6 +10,10 @@ const CAPABILITY_TTL_MS = 10 * 60 * 1000;
 const MAX_ARCHIVE_BYTES = 25 * 1024 * 1024;
 const MAX_SOURCE_BYTES = 50 * 1024 * 1024;
 const UPLOAD_TIMEOUT_MS = 30 * 1000;
+const REGULAR_FILE_MODES = new Set(['100644']);
+const DIRECTORY_MODES = new Set(['040000']);
+const SENSITIVE_ARCHIVE_NAME =
+  /(^|[._-])(credential|credentials|secret|secrets|token|tokens|private[._-]?key)([._-]|$)/i;
 const capabilities = new Map();
 
 function operationalError(code, message, statusCode) {
@@ -27,7 +32,12 @@ function isTrustedUploadUrl(value) {
   if (host === 'localhost' || host.endsWith('.localhost')) return false;
   if (/^(127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(host)) return false;
   if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
-  if (host === '::1' || host.startsWith('fc') || host.startsWith('fd') || host.startsWith('fe80:')) {
+  if (
+    host === '::1' ||
+    host.startsWith('fc') ||
+    host.startsWith('fd') ||
+    host.startsWith('fe80:')
+  ) {
     return false;
   }
   return host === 'heroku.com' || host.endsWith('.heroku.com') || host.endsWith('.amazonaws.com');
@@ -46,7 +56,11 @@ function issue(source, options = {}) {
   const putUrl = blob && (blob.put_url || blob.upload_url);
   const getUrl = blob && (blob.get_url || blob.download_url);
   if (!isTrustedUploadUrl(putUrl) || !isTrustedUploadUrl(getUrl)) {
-    throw operationalError('HEROKU_INVALID_SOURCE_URL', 'Heroku returned an untrusted source target.', 502);
+    throw operationalError(
+      'HEROKU_INVALID_SOURCE_URL',
+      'Heroku returned an untrusted source target.',
+      502
+    );
   }
   const id = crypto.randomUUID();
   const expiresAt = now + CAPABILITY_TTL_MS;
@@ -58,19 +72,35 @@ function getCapability(id, purpose, now = Date.now()) {
   prune(now);
   const entry = capabilities.get(id);
   if (!entry || entry.expiresAt <= now) {
-    throw operationalError('HEROKU_SOURCE_CAPABILITY_INVALID', 'The Heroku source capability is invalid or expired.', 410);
+    throw operationalError(
+      'HEROKU_SOURCE_CAPABILITY_INVALID',
+      'The Heroku source capability is invalid or expired.',
+      410
+    );
   }
   if (purpose === 'upload') {
     if (entry.uploadUsed) {
-      throw operationalError('HEROKU_SOURCE_CAPABILITY_USED', 'The Heroku source upload capability was already used.', 409);
+      throw operationalError(
+        'HEROKU_SOURCE_CAPABILITY_USED',
+        'The Heroku source upload capability was already used.',
+        409
+      );
     }
     entry.uploadUsed = true;
   } else {
     if (!entry.uploadUsed) {
-      throw operationalError('HEROKU_SOURCE_NOT_UPLOADED', 'The Heroku source archive has not been uploaded.', 409);
+      throw operationalError(
+        'HEROKU_SOURCE_NOT_UPLOADED',
+        'The Heroku source archive has not been uploaded.',
+        409
+      );
     }
     if (entry.buildUsed) {
-      throw operationalError('HEROKU_SOURCE_CAPABILITY_USED', 'The Heroku source build capability was already used.', 409);
+      throw operationalError(
+        'HEROKU_SOURCE_CAPABILITY_USED',
+        'The Heroku source build capability was already used.',
+        409
+      );
     }
     entry.buildUsed = true;
   }
@@ -92,13 +122,83 @@ function normalizeDirectory(value) {
 }
 
 function excluded(path) {
-  return path.split('/').some((part) =>
-    part === '.git' || part === 'node_modules' || part === '.env' || part.startsWith('.env.')
-  );
+  return path.split('/').some((part) => {
+    const lower = part.toLowerCase();
+    return (
+      lower === '.git' ||
+      lower === 'node_modules' ||
+      lower === '.env' ||
+      lower.startsWith('.env.') ||
+      SENSITIVE_ARCHIVE_NAME.test(lower)
+    );
+  });
+}
+
+function archiveValidationError() {
+  return new ValidationError('GitHub source contains an unsafe archive entry.');
+}
+
+function normalizeArchivePath(value) {
+  if (typeof value !== 'string' || value.includes('\0') || value.includes('\\')) {
+    throw archiveValidationError();
+  }
+  if (!value || value === '.' || path.posix.isAbsolute(value) || /^[A-Za-z]:(?:\/|$)/.test(value)) {
+    throw archiveValidationError();
+  }
+  if (value.split('/').some((part) => part === '..')) {
+    throw archiveValidationError();
+  }
+
+  const normalized = path.posix.normalize(value);
+  if (
+    !normalized ||
+    normalized === '.' ||
+    normalized === '..' ||
+    normalized.startsWith('../') ||
+    path.posix.isAbsolute(normalized) ||
+    normalized.includes('\0') ||
+    normalized.includes('\\') ||
+    /^[A-Za-z]:(?:\/|$)/.test(normalized)
+  ) {
+    throw archiveValidationError();
+  }
+  return normalized;
+}
+
+function selectedEntry(item, sourceDirectory) {
+  const prefix = `${sourceDirectory}/`;
+  if (!item || typeof item.path !== 'string') {
+    throw archiveValidationError();
+  }
+  if (item.path === sourceDirectory) {
+    if (item.type === 'tree' && DIRECTORY_MODES.has(String(item.mode))) return null;
+    throw archiveValidationError();
+  }
+  if (!item.path.startsWith(prefix)) return null;
+
+  const archivePath = normalizeArchivePath(item.path.slice(prefix.length));
+  if (excluded(archivePath)) return null;
+  if (item.type === 'tree' && DIRECTORY_MODES.has(String(item.mode))) return null;
+  if (item.type !== 'blob' || !REGULAR_FILE_MODES.has(String(item.mode))) {
+    throw archiveValidationError();
+  }
+  return { item, archivePath };
+}
+
+function normalizeArchiveFiles(files) {
+  const seen = new Set();
+  return files.map((file) => {
+    const archivePath = normalizeArchivePath(file.path);
+    if (seen.has(archivePath)) throw archiveValidationError();
+    seen.add(archivePath);
+    return { ...file, path: archivePath };
+  });
 }
 
 function writeOctal(buffer, offset, length, value) {
-  const text = Math.max(0, value).toString(8).padStart(length - 1, '0');
+  const text = Math.max(0, value)
+    .toString(8)
+    .padStart(length - 1, '0');
   buffer.write(text.slice(-(length - 1)), offset, length - 1, 'ascii');
   buffer[offset + length - 1] = 0;
 }
@@ -126,7 +226,7 @@ function tarHeader(name, size) {
 
 function makeArchive(files) {
   const parts = [];
-  for (const file of files.sort((a, b) => a.path.localeCompare(b.path))) {
+  for (const file of normalizeArchiveFiles(files).sort((a, b) => a.path.localeCompare(b.path))) {
     parts.push(tarHeader(file.path, file.content.length), file.content);
     const padding = (512 - (file.content.length % 512)) % 512;
     if (padding) parts.push(Buffer.alloc(padding));
@@ -158,29 +258,39 @@ async function readRepositoryFiles(input, options = {}) {
     tree_sha: commit.data.tree.sha,
     recursive: '1',
   });
-  const prefix = `${sourceDirectory}/`;
-  const entries = tree.data.tree.filter(
-    (item) => item.type === 'blob' && item.path.startsWith(prefix) && !excluded(item.path)
-  );
-  if (!entries.length) throw new ValidationError('No deployable files were found in sourceDirectory.');
+  const entries = [];
+  const seen = new Set();
+  for (const item of tree.data.tree) {
+    const entry = selectedEntry(item, sourceDirectory);
+    if (!entry) continue;
+    if (seen.has(entry.archivePath)) throw archiveValidationError();
+    seen.add(entry.archivePath);
+    entries.push(entry);
+  }
+  if (!entries.length)
+    throw new ValidationError('No deployable files were found in sourceDirectory.');
 
   let total = 0;
   const files = [];
-  for (const item of entries.sort((a, b) => a.path.localeCompare(b.path))) {
+  for (const entry of entries.sort((a, b) => a.archivePath.localeCompare(b.archivePath))) {
     const blob = await github.request('GET /repos/{owner}/{repo}/git/blobs/{file_sha}', {
       owner: repository.owner,
       repo: repository.repo,
-      file_sha: item.sha,
+      file_sha: entry.item.sha,
     });
     if (blob.data.encoding !== 'base64') {
-      throw operationalError('GITHUB_UNSUPPORTED_CONTENT', 'GitHub returned unsupported blob content.', 502);
+      throw operationalError(
+        'GITHUB_UNSUPPORTED_CONTENT',
+        'GitHub returned unsupported blob content.',
+        502
+      );
     }
     const content = Buffer.from(blob.data.content.replace(/\n/g, ''), 'base64');
     total += content.length;
     if (total > MAX_SOURCE_BYTES) {
       throw new PayloadTooLargeError('The selected GitHub source exceeds the size limit.');
     }
-    files.push({ path: item.path.slice(prefix.length), content });
+    files.push({ path: entry.archivePath, content });
   }
   return { repository, sourceDirectory, files };
 }
@@ -242,8 +352,10 @@ module.exports = {
   makeArchive,
   readRepositoryFiles,
   isTrustedUploadUrl,
+  normalizeArchivePath,
   reset,
   CAPABILITY_TTL_MS,
   MAX_ARCHIVE_BYTES,
   MAX_SOURCE_BYTES,
+  REGULAR_FILE_MODES,
 };
