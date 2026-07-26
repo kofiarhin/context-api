@@ -2,30 +2,32 @@ openapi: 3.1.0
 
 # The unified Zoro engineering Action.
 #
-# This schema publishes exactly ONE operationId. GPT Builder caps an Action at 30
-# operations, and the Context API's combined GitHub, Vercel, Heroku, context, and
-# operations-log surface is far larger than that. Collapsing everything behind a
-# single dispatcher keeps the whole engineering surface reachable from one Action
-# without splitting it across several schemas.
+# This schema publishes exactly TWO operationIds inside one Custom GPT Action.
+# GPT Builder caps an Action at 30 operations, and the Context API's combined
+# GitHub, Vercel, Heroku, context, and operations-log surface is far larger than
+# that. The read-only entry point is non-consequential; the complete engineering
+# entry point remains consequential.
 #
-# The dispatcher is NOT a generic proxy. `operationId` selects one of fifteen
+# Neither route is a generic proxy. `operationId` selects one of fifteen
 # server-side catalogue entries; it never names an upstream URL, HTTP method, or
 # path. Provider credentials (GitHub App key, Vercel token, Heroku API token)
 # remain server-side and are never accepted, returned, or substituted here.
 
 info:
   title: Zoro Unified Engineering Action
-  version: 1.0.0
+  version: 1.1.0
   description: >-
-    One executable entry point for Kofi's engineering control plane: Context API
-    records, the context resolver, GitHub repositories and pull requests, Vercel
-    projects and deployments, Heroku applications, and an append-only DevOps
-    operations log.
+    Two executable entry points for Kofi's engineering control plane: a
+    server-enforced read-only route for non-consequential retrieval and a complete
+    engineering route for Context API records, GitHub repositories and pull
+    requests, Vercel projects and deployments, Heroku applications, and the
+    append-only DevOps operations log.
 
 
-    Call POST /api/v1/zoro/operations/{operationId} with a dispatcher id in the
-    path and an operation name in the body. Authenticate with the
-    ZORO_ENGINEERING_API_KEY bearer key.
+    Call POST /api/v1/zoro/read/{operationId} for operations classified exactly as
+    read. Call POST /api/v1/zoro/operations/{operationId} for the complete governed
+    surface. Both routes use a dispatcher id in the path and an operation name in
+    the body. Authenticate with the ZORO_ENGINEERING_API_KEY bearer key.
 
 
     Approval and confirmation rules are enforced server-side and cannot be
@@ -51,10 +53,12 @@ paths:
     post:
       tags: [engineering]
       operationId: executeZoroEngineeringOperation
+      x-openai-isConsequential: true
       summary: Execute one allowlisted engineering operation
       description: >-
         Route a single engineering operation to the Context, GitHub, Vercel,
-        Heroku, or operations-log subsystem.
+        Heroku, or operations-log subsystem. This complete surface includes
+        mutations and therefore remains consequential.
 
 
         operationId (path) selects the dispatcher. operation (body) selects the
@@ -167,6 +171,94 @@ paths:
           description: >-
             A database-backed dispatcher was called while MongoDB is
             unavailable. Provider dispatchers stay available.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/zoro/read/{operationId}:
+    post:
+      tags: [engineering]
+      operationId: executeZoroReadOperation
+      x-openai-isConsequential: false
+      summary: Execute one server-enforced read-only engineering operation
+      description: >-
+        Route a single operation only when the resolved catalogue entry is
+        classified exactly as read. The backend rejects write, merge,
+        production-sensitive, security-sensitive, billing, access-admin, and
+        destructive operations before calling any provider or persistence service.
+
+
+        Dispatcher names may contain mixed classifications. The server validates
+        the selected body operation, so github.review/getPullRequest is permitted
+        while github.review/updatePullRequest and mergePullRequest are refused.
+      security:
+        - ZoroEngineeringBearer: []
+      parameters:
+        - name: operationId
+          in: path
+          required: true
+          description: A dispatcher containing at least one read-classified operation.
+          schema:
+            type: string
+            enum:
+              - health.check
+              - context.resolve
+              - engineering.read
+              - github.read
+              - github.review
+              - vercel.read
+              - heroku.execute
+              - opslog.read
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperationRequest'
+      responses:
+        '200':
+          description: The read operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationResponse'
+        '400':
+          description: >-
+            Validation failed, the operation is not allowed by the named
+            dispatcher, or the resolved operation is not classified as read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: The bearer key is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: The dispatcher id or the addressed resource does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: The request body exceeds the 512kb limit.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: The rate limit was exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: >-
+            A database-backed read dispatcher was called while MongoDB is
+            unavailable. Provider reads stay available.
           content:
             application/json:
               schema:
