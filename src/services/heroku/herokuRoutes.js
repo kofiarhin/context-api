@@ -32,6 +32,13 @@ const normalizedCoreRoutes = coreRoutes.map((route) => replacements[route.operat
 const runtimeActions = [
   {
     method: 'POST',
+    route: '/sources/:capability/upload',
+    upstream: '/sources',
+    operationId: 'uploadHerokuSourceArchive',
+    classification: 'production-sensitive',
+  },
+  {
+    method: 'POST',
     route: '/apps/:app/dynos/:dyno/stop',
     upstream: '/apps/{app}/dynos/{dyno}/actions/stop',
     operationId: 'stopHerokuDyno',
