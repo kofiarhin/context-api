@@ -28,6 +28,19 @@ function validateGithubBody(name) {
   };
 }
 
+/**
+ * Validates DELETE file input from query parameters when present, falling back
+ * to the legacy JSON body contract for existing callers. Some HTTP clients and
+ * OpenAPI runtimes do not reliably transmit bodies on DELETE requests.
+ */
+function validateGithubDeleteFile(req, res, next) {
+  const hasQueryInput = Object.keys(req.query || {}).length > 0;
+  const source = hasQueryInput ? req.query : req.body === undefined ? {} : req.body;
+
+  merge(req, { body: bodySchemas.deleteFile(source) });
+  next();
+}
+
 function validateGithubParam(name) {
   return function githubParamValidator(req, res, next) {
     const params = { ...((req.validated || {}).params || {}) };
@@ -38,4 +51,9 @@ function validateGithubParam(name) {
   };
 }
 
-module.exports = { validateGithubQuery, validateGithubBody, validateGithubParam };
+module.exports = {
+  validateGithubQuery,
+  validateGithubBody,
+  validateGithubDeleteFile,
+  validateGithubParam,
+};

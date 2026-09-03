@@ -6,6 +6,7 @@ const controller = require('../../controllers/github.controller');
 const {
   validateGithubQuery,
   validateGithubBody,
+  validateGithubDeleteFile,
   validateGithubParam,
 } = require('../../middleware/validateGithub');
 const { RouteNotFoundError } = require('../../utils/errors');
@@ -26,7 +27,7 @@ router.patch(
 
 router.post('/files', validateGithubBody('createFile'), controller.createFile);
 router.patch('/files', validateGithubBody('updateFile'), controller.updateFile);
-router.delete('/files', validateGithubBody('deleteFile'), controller.deleteFile);
+router.delete('/files', validateGithubDeleteFile, controller.deleteFile);
 
 router.post(
   '/pull-requests',
