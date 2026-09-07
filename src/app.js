@@ -10,6 +10,7 @@ const githubRouter = require('./routes/v1/github');
 const vercelRouter = require('./routes/v1/vercel');
 const herokuRouter = require('./routes/v1/heroku');
 const zoroRouter = require('./routes/v1/zoro');
+const blogRouter = require('./routes/v1/blog');
 
 const correlationId = require('./middleware/correlationId');
 const requestLogger = require('./middleware/requestLogger');
@@ -21,6 +22,7 @@ const requireGithubRepositoryAccess = require('./middleware/requireGithubReposit
 const requireVercelActionAuth = require('./middleware/requireVercelActionAuth');
 const requireHerokuActionAuth = require('./middleware/requireHerokuActionAuth');
 const requireEngineeringActionAuth = require('./middleware/requireEngineeringActionAuth');
+const requireBlogReadAuth = require('./middleware/requireBlogReadAuth');
 const notFound = require('./middleware/notFound');
 const errorHandler = require('./middleware/errorHandler');
 const { createCors, createRateLimiter } = require('./middleware/security');
@@ -84,6 +86,13 @@ function createApp(options = {}) {
     express.json({ limit: ZORO_JSON_BODY_LIMIT }),
     requireEngineeringActionAuth(env, { source: options.engineeringEnvSource }),
     zoroRouter
+  );
+
+  app.use(
+    '/api/v1/blog',
+    requireDatabase,
+    requireBlogReadAuth(env, { source: options.blogEnvSource }),
+    blogRouter
   );
 
   app.use('/api/v1', express.json({ limit: JSON_BODY_LIMIT }), requireDatabase, v1Router);
