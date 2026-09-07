@@ -22,6 +22,7 @@ function buildTestApp(overrides = {}, options = {}) {
     vercelEnvSource: options.vercelEnvSource || {},
     herokuEnvSource: options.herokuEnvSource || {},
     engineeringEnvSource: options.engineeringEnvSource || {},
+    blogEnvSource: options.blogEnvSource || {},
   });
 }
 
