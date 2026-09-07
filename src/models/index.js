@@ -9,6 +9,7 @@ module.exports = {
   IdeasHubContext: require('./ideasHubContext.model'),
   GlossaryEntry: require('./glossaryEntry.model'),
   Learning: require('./learning.model'),
+  BlogPost: require('./blogPost.model'),
   // Append-only; deliberately absent from CRUD_DOMAINS so the generic write and
   // soft-delete paths can never reach it.
   DevOpsLogEntry: require('./devopsLogEntry.model'),
