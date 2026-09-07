@@ -304,6 +304,34 @@ function serializeLearningSummary(doc) {
   };
 }
 
+function serializeBlogPost(doc) {
+  return {
+    title: doc.title,
+    slug: doc.slug,
+    excerpt: doc.excerpt,
+    content: doc.content,
+    tags: toArray(doc.tags),
+    sources: toArray(doc.sources).map((source) => ({
+      title: source.title,
+      url: source.url,
+    })),
+    coverImageUrl: doc.coverImageUrl ?? null,
+    coverImageAlt: doc.coverImageAlt ?? null,
+    seoTitle: doc.seoTitle,
+    seoDescription: doc.seoDescription,
+    status: doc.status,
+    publishedAt: toIso(doc.publishedAt),
+    origin: doc.origin
+      ? {
+          generator: doc.origin.generator ?? null,
+          sourceType: doc.origin.sourceType ?? null,
+        }
+      : null,
+    createdAt: toIso(doc.createdAt),
+    updatedAt: toIso(doc.updatedAt),
+  };
+}
+
 function serializeMany(serializer) {
   return (docs) => docs.map((doc) => serializer(doc));
 }
@@ -325,6 +353,7 @@ module.exports = {
   serializeGlossaryEntrySummary,
   serializeLearning,
   serializeLearningSummary,
+  serializeBlogPost,
   serializeMany,
   serializeSource,
 };
